@@ -5,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { fetchKrossbookingReservations } from '@/lib/krossbooking';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import { eachDayOfInterval, parseISO } from 'date-fns'; // Import date-fns utilities
+import { eachDayOfInterval, parseISO, isSameDay, addDays } from 'date-fns'; // Import addDays
 
 interface KrossbookingReservation {
   id: string;
@@ -23,7 +23,11 @@ const CalendarPage: React.FC = () => {
   const [reservations, setReservations] = React.useState<KrossbookingReservation[]>([]);
   const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [highlightedDates, setHighlightedDates] = React.useState<Date[]>([]); // New state for highlighted dates
+  
+  // New states for distinct highlighted dates
+  const [arrivalDates, setArrivalDates] = React.useState<Date[]>([]);
+  const [departureDates, setDepartureDates] = React.useState<Date[]>([]);
+  const [middleDates, setMiddleDates] = React.useState<Date[]>([]);
 
   const KROSSBOOKING_ROOM_ID = '62'; 
 
@@ -35,19 +39,34 @@ const CalendarPage: React.FC = () => {
         const fetchedReservations = await fetchKrossbookingReservations(KROSSBOOKING_ROOM_ID);
         setReservations(fetchedReservations);
 
-        // Calculate highlighted dates
-        const datesToHighlight: Date[] = [];
+        const newArrivalDates: Date[] = [];
+        const newDepartureDates: Date[] = [];
+        const newMiddleDates: Date[] = [];
+
         fetchedReservations.forEach(res => {
           try {
             const start = parseISO(res.check_in_date);
             const end = parseISO(res.check_out_date);
-            const intervalDays = eachDayOfInterval({ start, end });
-            datesToHighlight.push(...intervalDays);
+
+            newArrivalDates.push(start);
+            // Departure day is the day *before* the actual check-out for styling purposes
+            // If check-in and check-out are the same day, it's just an arrival/departure
+            if (!isSameDay(start, end)) {
+              newDepartureDates.push(end);
+            }
+            
+            // Calculate middle days
+            const intervalDays = eachDayOfInterval({ start: addDays(start, 1), end: addDays(end, -1) });
+            newMiddleDates.push(...intervalDays);
+
           } catch (dateError) {
             console.error("Error parsing date for reservation:", res, dateError);
           }
         });
-        setHighlightedDates(datesToHighlight);
+        
+        setArrivalDates(newArrivalDates);
+        setDepartureDates(newDepartureDates);
+        setMiddleDates(newMiddleDates);
 
       } catch (err: any) {
         setError(`Erreur lors du chargement des réservations : ${err.message}`);
@@ -74,8 +93,16 @@ const CalendarPage: React.FC = () => {
               selected={date}
               onSelect={setDate}
               className="rounded-md border shadow"
-              modifiers={{ reserved: highlightedDates }} // Pass highlighted dates as a modifier
-              modifiersClassNames={{ reserved: 'rdp-day_reserved' }} // Apply custom class
+              modifiers={{ 
+                arrival: arrivalDates, 
+                departure: departureDates, 
+                reservedMiddle: middleDates 
+              }}
+              modifiersClassNames={{ 
+                arrival: 'rdp-day_arrival', 
+                departure: 'rdp-day_departure', 
+                reservedMiddle: 'rdp-day_reserved-middle' 
+              }}
             />
             <p className="text-gray-600 dark:text-gray-400 mt-4">
               Date sélectionnée : {date ? date.toLocaleDateString('fr-FR') : 'Aucune'}
@@ -109,6 +136,24 @@ const CalendarPage: React.FC = () => {
                   ))}
                 </ul>
               )}
+            </div>
+
+            <div className="mt-6 w-full">
+              <h2 className="text-xl font-semibold mb-3">Légende du calendrier</h2>
+              <div className="flex flex-wrap gap-4 mt-2">
+                <div className="flex items-center">
+                  <span className="w-4 h-4 rounded-full bg-green-500 mr-2"></span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Arrivée</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="w-4 h-4 rounded-full bg-red-500 mr-2"></span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Départ</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="w-4 h-4 rounded-full bg-blue-500 mr-2"></span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Nuit réservée</span>
+                </div>
+              </div>
             </div>
 
             <div className="mt-6 w-full">

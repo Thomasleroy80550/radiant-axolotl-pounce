@@ -49,6 +49,14 @@
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Custom calendar colors */
+    --calendar-arrival-bg: 142.1 76.2% 36.3%; /* A green */
+    --calendar-arrival-fg: 355.7 100% 97.3%; /* Light text */
+    --calendar-departure-bg: 0 84.2% 60.2%; /* Red, same as destructive */
+    --calendar-departure-fg: 210 40% 98%; /* Light text */
+    --calendar-middle-bg: 217.2 91.2% 59.8%; /* A blue */
+    --calendar-middle-fg: 210 40% 98%; /* Light text */
   }
 
   .dark {
@@ -87,6 +95,14 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Custom calendar colors for dark mode */
+    --calendar-arrival-bg: 142.1 76.2% 36.3%; /* A green */
+    --calendar-arrival-fg: 355.7 100% 97.3%; /* Light text */
+    --calendar-departure-bg: 0 62.8% 30.6%; /* Red, same as destructive */
+    --calendar-departure-fg: 210 40% 98%; /* Light text */
+    --calendar-middle-bg: 217.2 32.6% 17.5%; /* A darker blue/gray */
+    --calendar-middle-fg: 210 40% 98%; /* Light text */
   }
 }
 
@@ -100,14 +116,39 @@
   }
 }
 
-/* Custom style for reserved dates in the calendar */
-.rdp-day_reserved {
-  background-color: hsl(var(--primary)) !important; /* Use your primary color */
-  color: hsl(var(--primary-foreground)) !important;
-  border-radius: 0.25rem; /* Slightly rounded corners */
+/* Custom styles for reserved dates in the calendar */
+.rdp-day_arrival {
+  background-color: hsl(var(--calendar-arrival-bg)) !important;
+  color: hsl(var(--calendar-arrival-fg)) !important;
+  border-radius: 0.25rem;
 }
 
-.rdp-day_reserved:hover {
-  background-color: hsl(var(--primary-foreground)) !important; /* Darker on hover */
-  color: hsl(var(--primary)) !important;
+.rdp-day_arrival:hover {
+  background-color: hsl(var(--calendar-arrival-bg) / 0.9) !important;
+}
+
+.rdp-day_departure {
+  background-color: hsl(var(--calendar-departure-bg)) !important;
+  color: hsl(var(--calendar-departure-fg)) !important;
+  border-radius: 0.25rem;
+}
+
+.rdp-day_departure:hover {
+  background-color: hsl(var(--calendar-departure-bg) / 0.9) !important;
+}
+
+.rdp-day_reserved-middle {
+  background-color: hsl(var(--calendar-middle-bg)) !important;
+  color: hsl(var(--calendar-middle-fg)) !important;
+  border-radius: 0.25rem;
+}
+
+.rdp-day_reserved-middle:hover {
+  background-color: hsl(var(--calendar-middle-bg) / 0.9) !important;
+}
+
+/* Ensure selected day style doesn't override modifiers */
+.rdp-day_selected:not(.rdp-day_arrival):not(.rdp-day_departure):not(.rdp-day_reserved-middle) {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
 }
