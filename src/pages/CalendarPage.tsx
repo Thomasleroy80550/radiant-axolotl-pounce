@@ -14,6 +14,7 @@ interface KrossbookingReservation {
   check_out_date: string;
   status: string;
   amount: string;
+  // Add other fields as per Krossbooking API response
 }
 
 const CalendarPage: React.FC = () => {
