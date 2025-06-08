@@ -45,18 +45,16 @@ async function getAuthToken(): Promise<string> {
   console.log(`Krossbooking Auth Response Status: ${response.status}`);
   console.log(`Krossbooking Auth Response Status Text: ${response.statusText}`);
 
-  // IMPORTANT: Clone the response before reading its body, as it can only be read once.
   const clonedResponse = response.clone();
   const rawResponseText = await clonedResponse.text();
   console.log("Krossbooking Raw Auth Response Body:", rawResponseText);
 
   if (!response.ok) {
-    // Use the rawResponseText for error data if JSON parsing fails
     let errorData;
     try {
       errorData = JSON.parse(rawResponseText);
     } catch (e) {
-      errorData = rawResponseText; // Fallback to raw text if not JSON
+      errorData = rawResponseText;
     }
     console.error("Failed to get Krossbooking token. Error data:", errorData);
     throw new Error(`Failed to get Krossbooking token: ${response.statusText} - ${JSON.stringify(errorData)}`);
@@ -64,8 +62,9 @@ async function getAuthToken(): Promise<string> {
 
   const data = await response.json();
   console.log("Krossbooking token response data (parsed JSON):", data);
-  if (data && data.token) {
-    return data.token;
+  // Corrected: Look for 'auth_token' instead of 'token'
+  if (data && data.auth_token) { 
+    return data.auth_token;
   } else {
     throw new Error("Krossbooking token not found in response.");
   }
@@ -77,7 +76,6 @@ serve(async (req) => {
   }
 
   try {
-    // Get authentication token
     const authToken = await getAuthToken();
     console.log("Successfully obtained Krossbooking auth token.");
 
