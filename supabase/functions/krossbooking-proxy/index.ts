@@ -62,7 +62,6 @@ async function getAuthToken(): Promise<string> {
 
   const data = await response.json();
   console.log("Krossbooking token response data (parsed JSON):", data);
-  // Corrected: Look for 'auth_token' instead of 'token'
   if (data && data.auth_token) { 
     return data.auth_token;
   } else {
@@ -80,10 +79,22 @@ serve(async (req) => {
     console.log("Successfully obtained Krossbooking auth token.");
 
     const url = new URL(req.url);
-    const queryParams = url.searchParams.toString();
+    const action = url.searchParams.get('action');
+    const roomId = url.searchParams.get('room_id');
 
-    const krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}?${queryParams}`;
-    console.log("Calling Krossbooking API with token:", krossbookingUrl);
+    let krossbookingUrl = '';
+
+    if (action === 'get_reservations') {
+      if (!roomId) {
+        throw new Error("Missing 'room_id' parameter for 'get_reservations' action.");
+      }
+      // Construct the URL with the specific endpoint for reservations
+      krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations?room_id=${roomId}`;
+    } else {
+      throw new Error(`Unsupported action: ${action}`);
+    }
+
+    console.log("Calling Krossbooking API with URL:", krossbookingUrl);
 
     const response = await fetch(krossbookingUrl, {
       method: req.method,
