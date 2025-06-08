@@ -2,9 +2,10 @@ import React from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
-import { fetchKrossbookingReservations } from '@/lib/krossbooking'; // Import the new utility function
+import { fetchKrossbookingReservations } from '@/lib/krossbooking';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
+import { eachDayOfInterval, parseISO } from 'date-fns'; // Import date-fns utilities
 
 interface KrossbookingReservation {
   id: string;
@@ -22,8 +23,8 @@ const CalendarPage: React.FC = () => {
   const [reservations, setReservations] = React.useState<KrossbookingReservation[]>([]);
   const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [highlightedDates, setHighlightedDates] = React.useState<Date[]>([]); // New state for highlighted dates
 
-  // IMPORTANT: Changed KROSSBOOKING_ROOM_ID to '62' as requested.
   const KROSSBOOKING_ROOM_ID = '62'; 
 
   React.useEffect(() => {
@@ -33,6 +34,21 @@ const CalendarPage: React.FC = () => {
       try {
         const fetchedReservations = await fetchKrossbookingReservations(KROSSBOOKING_ROOM_ID);
         setReservations(fetchedReservations);
+
+        // Calculate highlighted dates
+        const datesToHighlight: Date[] = [];
+        fetchedReservations.forEach(res => {
+          try {
+            const start = parseISO(res.check_in_date);
+            const end = parseISO(res.check_out_date);
+            const intervalDays = eachDayOfInterval({ start, end });
+            datesToHighlight.push(...intervalDays);
+          } catch (dateError) {
+            console.error("Error parsing date for reservation:", res, dateError);
+          }
+        });
+        setHighlightedDates(datesToHighlight);
+
       } catch (err: any) {
         setError(`Erreur lors du chargement des réservations : ${err.message}`);
         console.error(err);
@@ -42,7 +58,7 @@ const CalendarPage: React.FC = () => {
     };
 
     loadReservations();
-  }, [KROSSBOOKING_ROOM_ID]); // Re-fetch if room ID changes
+  }, [KROSSBOOKING_ROOM_ID]);
 
   return (
     <MainLayout>
@@ -58,6 +74,8 @@ const CalendarPage: React.FC = () => {
               selected={date}
               onSelect={setDate}
               className="rounded-md border shadow"
+              modifiers={{ reserved: highlightedDates }} // Pass highlighted dates as a modifier
+              modifiersClassNames={{ reserved: 'rdp-day_reserved' }} // Apply custom class
             />
             <p className="text-gray-600 dark:text-gray-400 mt-4">
               Date sélectionnée : {date ? date.toLocaleDateString('fr-FR') : 'Aucune'}

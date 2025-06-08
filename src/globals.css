@@ -99,3 +99,15 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom style for reserved dates in the calendar */
+.rdp-day_reserved {
+  background-color: hsl(var(--primary)) !important; /* Use your primary color */
+  color: hsl(var(--primary-foreground)) !important;
+  border-radius: 0.25rem; /* Slightly rounded corners */
+}
+
+.rdp-day_reserved:hover {
+  background-color: hsl(var(--primary-foreground)) !important; /* Darker on hover */
+  color: hsl(var(--primary)) !important;
+}
