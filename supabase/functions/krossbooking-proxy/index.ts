@@ -131,8 +131,8 @@ serve(async (req) => {
       if (!roomId) {
         throw new Error("Missing 'room_id' parameter for 'get_reservations' action.");
       }
-      // Corrected URL path: assuming room_id should be part of the path
-      krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/rooms/${roomId}/reservations`;
+      // Corrected URL path: assuming room_id should be a query parameter
+      krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations?room_id=${roomId}`;
     } else {
       throw new Error(`Unsupported action: ${action}`);
     }
