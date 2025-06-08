@@ -44,7 +44,7 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
       },
       body: JSON.stringify({
         action: 'get_reservations',
-        room_id: roomId,
+        room_id: roomId, // Still send room_id, even if API doesn't filter, for consistency
       }),
     });
 
@@ -67,7 +67,12 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
 
     // Check if krossbookingResponse.data exists and is an array
     if (krossbookingResponse && Array.isArray(krossbookingResponse.data)) {
-      return krossbookingResponse.data.map((res: any) => ({
+      // Filter reservations by the requested roomId (id_property)
+      const filteredReservations = krossbookingResponse.data.filter((res: any) => 
+        res.id_property.toString() === roomId
+      );
+
+      return filteredReservations.map((res: any) => ({
         id: res.id_reservation.toString(), // Map id_reservation to id
         guest_name: res.label || 'N/A', // Map label to guest_name
         property_name: res.id_property.toString(), // Map id_property to property_name
