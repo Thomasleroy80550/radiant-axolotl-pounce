@@ -178,8 +178,11 @@ serve(async (req) => {
           return room.id_room.toString() === requestedRoomId;
         });
       });
-      console.log(`Filtered data for room ${requestedRoomId}:`, filteredData);
+      console.log(`DEBUG_EDGE: Filtered data for room ${requestedRoomId} (count: ${filteredData.length}):`, filteredData); // Added log
+    } else {
+      console.log(`DEBUG_EDGE: No requestedRoomId provided. Returning all data (count: ${filteredData.length}):`, filteredData); // Added log
     }
+
 
     return new Response(JSON.stringify({ data: filteredData, total_count: filteredData.length, count: filteredData.length, limit: data.limit, offset: data.offset }), {
       status: response.status,
