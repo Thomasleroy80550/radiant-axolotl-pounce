@@ -26,9 +26,9 @@ interface Property {
 // Define your properties here. For now, using a hardcoded list.
 // The 'id' here should correspond to the KROSSBOOKING_ROOM_ID you'd use for fetching.
 const properties: Property[] = [
-  { id: '62', name: 'Appartement Paris' },
-  { id: '63', name: 'Studio Nice' },
-  { id: '64', name: 'Maison Bordeaux' },
+  { id: '1', name: 'Appartement Paris' }, // Changed ID to '1'
+  { id: '1', name: 'Studio Nice' },      // Changed ID to '1'
+  { id: '1', name: 'Maison Bordeaux' },  // Changed ID to '1'
   // Add more properties as needed, with their corresponding Krossbooking room IDs
 ];
 
@@ -43,22 +43,11 @@ const BookingPlanningGrid: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const fetchedReservationsPromises = properties.map(property =>
-          fetchKrossbookingReservations(property.id)
-        );
-        const results = await Promise.allSettled(fetchedReservationsPromises);
-        
-        const successfulReservations: KrossbookingReservation[] = [];
-        results.forEach((result, index) => {
-          if (result.status === 'fulfilled') {
-            successfulReservations.push(...result.value);
-          } else {
-            console.error(`Error fetching reservations for property ${properties[index].name}:`, result.reason);
-            setError(prev => (prev ? `${prev}\nErreur pour ${properties[index].name}: ${result.reason.message || result.reason}` : `Erreur pour ${properties[index].name}: ${result.reason.message || result.reason}`));
-          }
-        });
-        setAllReservations(successfulReservations);
-        console.log("All fetched reservations:", successfulReservations); // Log all fetched reservations
+        // Fetch reservations only once for the common property ID '1'
+        // If Krossbooking API truly returns all reservations for the hotel under id_property: 1
+        const fetchedReservations = await fetchKrossbookingReservations('1'); 
+        setAllReservations(fetchedReservations);
+        console.log("All fetched reservations:", fetchedReservations); 
       } catch (err: any) {
         setError(`Erreur générale lors du chargement des réservations : ${err.message}`);
         console.error(err);
@@ -68,7 +57,7 @@ const BookingPlanningGrid: React.FC = () => {
     };
 
     loadAllReservations();
-  }, []); // Empty dependency array to fetch all reservations once on mount
+  }, []); 
 
   const daysInMonth = useMemo(() => {
     const start = startOfMonth(currentMonth);
@@ -82,81 +71,6 @@ const BookingPlanningGrid: React.FC = () => {
 
   const goToNextMonth = () => {
     setCurrentMonth(addMonths(currentMonth, 1));
-  };
-
-  const getReservationStyle = (reservation: KrossbookingReservation, day: Date) => {
-    const checkIn = parseISO(reservation.check_in_date);
-    const checkOut = parseISO(reservation.check_out_date); // This is the day *after* the last night
-
-    const isArrivalDay = isSameDay(day, checkIn);
-    const isDepartureDay = isSameDay(day, checkOut); // Check if it's the actual check-out day
-    const isReservedNight = isWithinInterval(day, { start: checkIn, end: addDays(checkOut, -1) }); // Nights between check-in and day before check-out
-
-    if (!isArrivalDay && !isDepartureDay && !isReservedNight) {
-      return {}; // Not part of this reservation
-    }
-
-    const startDayIndex = daysInMonth.findIndex(d => isSameDay(d, checkIn));
-    const endDayIndex = daysInMonth.findIndex(d => isSameDay(d, addDays(checkOut, -1))); // Last night of stay
-
-    if (startDayIndex === -1 && endDayIndex === -1 && !isReservedNight) {
-      return {}; // Reservation not in current month
-    }
-
-    // Calculate the span of the reservation within the current month's grid
-    const firstDayOfMonth = daysInMonth[0];
-    const lastDayOfMonth = daysInMonth[daysInMonth.length - 1];
-
-    const actualStart = checkIn > firstDayOfMonth ? checkIn : firstDayOfMonth;
-    const actualEnd = addDays(checkOut, -1) < lastDayOfMonth ? addDays(checkOut, -1) : lastDayOfMonth;
-
-    const spanStart = eachDayOfInterval({ start: firstDayOfMonth, end: actualStart }).length;
-    const spanEnd = eachDayOfInterval({ start: firstDayOfMonth, end: actualEnd }).length;
-    const spanLength = spanEnd - spanStart + 1;
-
-    let backgroundColor = 'bg-blue-500'; // Default color
-    let textColor = 'text-white';
-    let borderLeft = '';
-    let borderRight = '';
-    let borderRadius = '';
-
-    switch (reservation.status) {
-      case 'CONFIRMED': // Assuming Krossbooking uses 'CONFIRMED'
-        backgroundColor = 'bg-green-500';
-        break;
-      case 'PENDING': // Assuming Krossbooking uses 'PENDING'
-        backgroundColor = 'bg-yellow-500';
-        break;
-      case 'CANCELLED': // Assuming Krossbooking uses 'CANCELLED'
-        backgroundColor = 'bg-red-500';
-        break;
-      default:
-        backgroundColor = 'bg-gray-500';
-    }
-
-    if (isArrivalDay) {
-      borderLeft = 'border-l-4 border-green-700'; // Green for arrival
-      borderRadius = 'rounded-l-md';
-    }
-    if (isSameDay(day, addDays(checkOut, -1))) { // If it's the last night of the stay
-      borderRight = 'border-r-4 border-red-700'; // Red for departure
-      borderRadius = 'rounded-r-md';
-    }
-    if (isArrivalDay && isSameDay(day, addDays(checkOut, -1))) { // Single night stay
-      borderRadius = 'rounded-md';
-    }
-
-    return {
-      gridColumn: `${spanStart} / span ${spanLength}`, // This is for the CSS grid-column property
-      backgroundColor,
-      textColor,
-      borderLeft,
-      borderRight,
-      borderRadius,
-      isArrivalDay,
-      isDepartureDay: isSameDay(day, addDays(checkOut, -1)), // This is the last night
-      isMiddleDay: isReservedNight && !isArrivalDay && !isSameDay(day, addDays(checkOut, -1)),
-    };
   };
 
   const dayCellWidth = 40; // px, adjust as needed for visual spacing
@@ -238,13 +152,7 @@ const BookingPlanningGrid: React.FC = () => {
 
                 {/* Reservation Bars (Overlay) */}
                 {allReservations
-                  .filter(res => {
-                    const isForThisProperty = res.property_name === property.id;
-                    if (!isForThisProperty) {
-                      // console.log(`Skipping reservation ${res.id} for property ${res.property_name} as it's not for ${property.id}`);
-                    }
-                    return isForThisProperty;
-                  }) // Filter reservations for this property
+                  .filter(res => res.property_name === property.id) // Filter reservations for this property
                   .map((reservation) => {
                     const checkIn = parseISO(reservation.check_in_date);
                     const checkOut = parseISO(reservation.check_out_date);
@@ -258,7 +166,6 @@ const BookingPlanningGrid: React.FC = () => {
                       (checkIn <= monthEnd && lastNight >= monthStart);
 
                     if (!overlapsWithMonth) {
-                      // console.log(`Reservation ${reservation.id} (${reservation.guest_name}) does not overlap with current month.`);
                       return null; // Reservation is completely outside the current month
                     }
 
@@ -271,7 +178,6 @@ const BookingPlanningGrid: React.FC = () => {
                     const endColIndex = daysInMonth.findIndex(d => isSameDay(d, effectiveEndDay));
 
                     if (startColIndex === -1 || endColIndex === -1) {
-                      // This should ideally not happen if overlapsWithMonth is true and daysInMonth is correct
                       console.warn(`Could not find start/end day in current month for reservation ${reservation.id}.`);
                       return null;
                     }
