@@ -36,26 +36,29 @@ const BookingPlanningGrid: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadAllReservations = async () => {
+    const loadReservationsForProperties = async () => {
       setLoading(true);
       setError(null);
       try {
-        // Fetch all reservations without filtering by room ID in the proxy
-        // We pass a dummy roomId as it's no longer used for filtering in the proxy,
-        // but the function signature expects it.
-        const fetchedReservations = await fetchKrossbookingReservations('dummy'); 
+        const fetchedReservations: KrossbookingReservation[] = [];
+        // Fetch reservations for each defined property ID
+        for (const property of properties) {
+          console.log(`DEBUG: Fetching reservations for property ID: ${property.id}`);
+          const reservationsForProperty = await fetchKrossbookingReservations(property.id);
+          fetchedReservations.push(...reservationsForProperty);
+        }
         setAllReservations(fetchedReservations);
-        console.log("DEBUG: All fetched reservations (combined, before client-side filtering):", fetchedReservations); 
+        console.log("DEBUG: All fetched reservations (combined from multiple property calls):", fetchedReservations); 
       } catch (err: any) {
-        setError(`Erreur générale lors du chargement des réservations : ${err.message}`);
-        console.error("DEBUG: Error in loadAllReservations:", err);
+        setError(`Erreur lors du chargement des réservations : ${err.message}`);
+        console.error("DEBUG: Error in loadReservationsForProperties:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    loadAllReservations();
-  }, []); 
+    loadReservationsForProperties();
+  }, []); // Empty dependency array means this runs once on mount
 
   const daysInMonth = useMemo(() => {
     const start = startOfMonth(currentMonth);
@@ -133,13 +136,8 @@ const BookingPlanningGrid: React.FC = () => {
             {/* Property Rows */}
             {properties.map((property) => {
               console.log(`DEBUG: Processing property: ${property.name} (ID: ${property.id})`);
-              const reservationsForThisProperty = allReservations.filter(res => {
-                const isMatch = res.property_name === property.id;
-                if (!isMatch) {
-                  // console.log(`DEBUG: Mismatch - Reservation ID: ${res.id}, Expected property_name: ${property.id}, Actual property_name: ${res.property_name}`);
-                }
-                return isMatch;
-              });
+              // Filter reservations for this specific property ID
+              const reservationsForThisProperty = allReservations.filter(res => res.property_name === property.id);
               console.log(`DEBUG: Found ${reservationsForThisProperty.length} reservations for property ${property.id}.`);
 
               return (
@@ -184,8 +182,10 @@ const BookingPlanningGrid: React.FC = () => {
                       const effectiveEndDay = lastNight > monthEnd ? monthEnd : lastNight;
 
                       // Calculate column start and span based on daysInMonth array
-                      const startColIndex = daysInInterval({ start: monthStart, end: effectiveStartDay }).length - 1;
-                      const endColIndex = daysInInterval({ start: monthStart, end: effectiveEndDay }).length - 1;
+                      // daysInInterval returns an array of dates, its length gives us the count of days.
+                      // We subtract 1 to get a 0-indexed position for array access.
+                      const startColIndex = eachDayOfInterval({ start: monthStart, end: effectiveStartDay }).length - 1;
+                      const endColIndex = eachDayOfInterval({ start: monthStart, end: effectiveEndDay }).length - 1;
 
                       if (startColIndex === -1 || endColIndex === -1 || startColIndex > endColIndex) {
                         console.warn(`DEBUG: Could not find valid start/end day in current month for reservation ${reservation.id}. Effective range: ${format(effectiveStartDay, 'yyyy-MM-dd')} to ${format(effectiveEndDay, 'yyyy-MM-dd')}. Start Index: ${startColIndex}, End Index: ${endColIndex}`);
@@ -193,7 +193,7 @@ const BookingPlanningGrid: React.FC = () => {
                       }
 
                       const colSpan = endColIndex - startColIndex + 1;
-                      const gridColumnStart = startColIndex + 1; // CSS grid columns are 1-indexed, plus 1 for the property name column
+                      // const gridColumnStart = startColIndex + 1; // CSS grid columns are 1-indexed, plus 1 for the property name column
 
                       let backgroundColor = 'bg-blue-500'; // Default color
                       let textColor = 'text-white';
@@ -229,7 +229,7 @@ const BookingPlanningGrid: React.FC = () => {
                       }
 
 
-                      console.log(`DEBUG: Drawing reservation ${reservation.id} for property ${reservation.property_name}. Dates: ${format(checkIn, 'yyyy-MM-dd')} to ${format(lastNight, 'yyyy-MM-dd')} (last night). Effective: ${format(effectiveStartDay, 'yyyy-MM-dd')} to ${format(effectiveEndDay, 'yyyy-MM-dd')}. Grid: col ${gridColumnStart} / span ${colSpan}`);
+                      console.log(`DEBUG: Drawing reservation ${reservation.id} for property ${reservation.property_name}. Dates: ${format(checkIn, 'yyyy-MM-dd')} to ${format(lastNight, 'yyyy-MM-dd')} (last night). Effective: ${format(effectiveStartDay, 'yyyy-MM-dd')} to ${format(effectiveEndDay, 'yyyy-MM-dd')}. Grid: col ${startColIndex + 1} / span ${colSpan}`);
 
                       return (
                         <div
