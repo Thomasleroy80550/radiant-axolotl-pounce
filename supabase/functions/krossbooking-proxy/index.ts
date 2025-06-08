@@ -169,7 +169,14 @@ serve(async (req) => {
     if (requestedRoomId) {
       filteredData = filteredData.filter((reservation: any) => {
         // Check if any room in the reservation matches the requestedRoomId
-        return reservation.rooms && reservation.rooms.some((room: any) => room.id_room.toString() === requestedRoomId);
+        return reservation.rooms && reservation.rooms.some((room: any) => {
+          // Add explicit check for null/undefined id_room
+          if (room.id_room == null) {
+            console.warn(`DEBUG_EDGE: room.id_room is null or undefined for reservation ID: ${reservation.id_reservation}. Skipping this room for filtering.`);
+            return false; // Skip this room if id_room is null/undefined
+          }
+          return room.id_room.toString() === requestedRoomId;
+        });
       });
       console.log(`Filtered data for room ${requestedRoomId}:`, filteredData);
     }
