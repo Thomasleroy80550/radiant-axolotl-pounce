@@ -126,16 +126,16 @@ serve(async (req) => {
     console.log(`Received action: ${action}, room_id: ${roomId}`);
 
     let krossbookingUrl = '';
-    let krossbookingMethod = 'GET'; // Default method
+    let krossbookingMethod = 'POST'; // Method is POST as per documentation
     let krossbookingBody: string | undefined;
 
     if (action === 'get_reservations') {
       if (!roomId) {
         throw new Error("Missing 'room_id' parameter for 'get_reservations' action.");
       }
-      krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/get-reservations`; // Endpoint without query param
-      krossbookingMethod = 'POST'; // Change to POST
-      krossbookingBody = JSON.stringify({ room_id: roomId }); // Send room_id in body
+      // Updated the path to /reservations/get-list as per documentation
+      krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
+      krossbookingBody = JSON.stringify({ room_id: roomId }); // Send room_id in body for POST
     } else {
       throw new Error(`Unsupported action: ${action}`);
     }
