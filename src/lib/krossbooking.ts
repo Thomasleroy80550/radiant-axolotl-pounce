@@ -20,14 +20,14 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
   try {
     // Pass parameters in the body for POST request to the Edge Function
     const { data, error } = await supabase.functions.invoke('krossbooking-proxy', {
-      method: 'POST', // Changed to POST
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: { // Parameters are now in the body
+      body: JSON.stringify({ // Explicitly stringify the body
         action: 'get_reservations',
         room_id: roomId,
-      },
+      }),
     });
 
     if (error) {
