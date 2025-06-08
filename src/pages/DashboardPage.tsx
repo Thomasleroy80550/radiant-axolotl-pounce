@@ -3,10 +3,77 @@ import MainLayout from "@/components/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
 
 const DashboardPage = () => {
   const currentYear = new Date().getFullYear();
   const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
+
+  // Donut Chart Data
+  const activityData = [
+    { name: 'Airbnb', value: 400, color: '#2563eb' }, // blue-600
+    { name: 'Booking', value: 300, color: '#dc2626' }, // red-600
+    { name: 'Abritel', value: 200, color: '#d97706' }, // yellow-600
+    { name: 'Hello Keys', value: 100, color: '#16a34a' }, // green-600
+  ];
+
+  // Monthly Data for Bar Charts
+  const monthlyStatsData = [
+    { name: 'Jan', value: 4000 },
+    { name: 'Fév', value: 3000 },
+    { name: 'Mar', value: 2000 },
+    { name: 'Avr', value: 2780 },
+    { name: 'Mai', value: 1890 },
+    { name: 'Juin', value: 2390 },
+    { name: 'Juil', value: 3490 },
+    { name: 'Août', value: 4200 },
+    { name: 'Sep', value: 3800 },
+    { name: 'Oct', value: 2900 },
+    { name: 'Nov', value: 3100 },
+    { name: 'Déc', value: 3500 },
+  ];
+
+  const reservationPerMonthData = [
+    { name: 'Jan', reservations: 10 },
+    { name: 'Fév', reservations: 12 },
+    { name: 'Mar', reservations: 8 },
+    { name: 'Avr', reservations: 15 },
+    { name: 'Mai', reservations: 11 },
+    { name: 'Juin', reservations: 14 },
+    { name: 'Juil', reservations: 18 },
+    { name: 'Août', reservations: 16 },
+    { name: 'Sep', reservations: 13 },
+    { name: 'Oct', reservations: 9 },
+    { name: 'Nov', reservations: 10 },
+    { name: 'Déc', reservations: 12 },
+  ];
+
+  const occupationRateData = [
+    { name: 'Jan', occupation: 65 },
+    { name: 'Fév', occupation: 70 },
+    { name: 'Mar', occupation: 55 },
+    { name: 'Avr', occupation: 80 },
+    { name: 'Mai', occupation: 72 },
+    { name: 'Juin', occupation: 78 },
+    { name: 'Juil', occupation: 85 },
+    { name: 'Août', occupation: 88 },
+    { name: 'Sep', occupation: 75 },
+    { name: 'Oct', occupation: 60 },
+    { name: 'Nov', occupation: 68 },
+    { name: 'Déc', occupation: 70 },
+  ];
 
   return (
     <MainLayout>
@@ -110,47 +177,104 @@ const DashboardPage = () => {
               <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center h-full">
-              {/* Placeholder for Donut Chart */}
-              <div className="w-48 h-48 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 text-sm mb-4">
-                Donut Chart Placeholder
-              </div>
-              <div className="text-sm space-y-1">
-                <div className="flex items-center"><span className="w-3 h-3 bg-blue-600 rounded-full mr-2"></span>Airbnb</div>
-                <div className="flex items-center"><span className="w-3 h-3 bg-red-600 rounded-full mr-2"></span>Booking</div>
-                <div className="flex items-center"><span className="w-3 h-3 bg-yellow-600 rounded-full mr-2"></span>Abritel</div>
-                <div className="flex items-center"><span className="w-3 h-3 bg-green-600 rounded-full mr-2"></span>Hello Keys</div>
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={activityData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {activityData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="text-sm space-y-1 mt-4">
+                {activityData.map((item) => (
+                  <div key={item.name} className="flex items-center">
+                    <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: item.color }}></span>
+                    {item.name}
+                  </div>
+                ))}
               </div>
               <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400 mt-4">Voir mes réservations -&gt;</Button>
             </CardContent>
           </Card>
 
-          {/* Statistics Card (Placeholder for Chart) */}
+          {/* Statistics Card (Bar Chart) */}
           <Card className="shadow-md col-span-full lg:col-span-1">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Statistiques</CardTitle>
             </CardHeader>
-            <CardContent className="h-64 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-md">
-              Graphique Statistiques Placeholder
+            <CardContent className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyStatsData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                  <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
+                  <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    itemStyle={{ color: 'hsl(var(--foreground))' }}
+                  />
+                  <Legend />
+                  <Bar dataKey="value" fill="hsl(var(--primary))" name="Valeur" />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          {/* Réservation / mois Card (Placeholder for Chart) */}
+          {/* Réservation / mois Card (Bar Chart) */}
           <Card className="shadow-md col-span-full lg:col-span-1">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Réservation / mois</CardTitle>
             </CardHeader>
-            <CardContent className="h-64 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-md">
-              Graphique Réservation / mois Placeholder
+            <CardContent className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={reservationPerMonthData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                  <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
+                  <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    itemStyle={{ color: 'hsl(var(--foreground))' }}
+                  />
+                  <Legend />
+                  <Bar dataKey="reservations" fill="hsl(var(--accent))" name="Réservations" />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          {/* Occupation Card (Placeholder for Chart) */}
+          {/* Occupation Card (Bar Chart) */}
           <Card className="shadow-md col-span-full lg:col-span-1">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Occupation</CardTitle>
             </CardHeader>
-            <CardContent className="h-64 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-md">
-              Graphique Occupation Placeholder
+            <CardContent className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={occupationRateData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                  <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
+                  <YAxis unit="%" className="text-sm text-gray-600 dark:text-gray-400" />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    itemStyle={{ color: 'hsl(var(--foreground))' }}
+                    formatter={(value: number) => `${value}%`}
+                  />
+                  <Legend />
+                  <Bar dataKey="occupation" fill="hsl(var(--secondary))" name="Occupation" />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </div>
