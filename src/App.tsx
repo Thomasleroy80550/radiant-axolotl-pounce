@@ -16,6 +16,8 @@ import ModulesPage from "./pages/ModulesPage";
 import RoadmapPage from "./pages/RoadmapPage";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
+import Login from "./pages/Login"; // Import the new Login page
+import { SessionContextProvider } from "./components/SessionContextProvider"; // Import the new SessionContextProvider
 
 const queryClient = new QueryClient();
 
@@ -25,22 +27,25 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/calendar" element={<CalendarPage />} />
-          <Route path="/bookings" element={<BookingsPage />} />
-          <Route path="/performance" element={<PerformancePage />} />
-          <Route path="/reviews" element={<ReviewsPage />} />
-          <Route path="/accounting" element={<AccountingPage />} />
-          <Route path="/balances" element={<BalancesPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/help" element={<HelpPage />} />
-          <Route path="/modules" element={<ModulesPage />} />
-          <Route path="/roadmap" element={<RoadmapPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <SessionContextProvider> {/* Wrap routes with SessionContextProvider */}
+          <Routes>
+            <Route path="/login" element={<Login />} /> {/* Add the login route */}
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/calendar" element={<CalendarPage />} />
+            <Route path="/bookings" element={<BookingsPage />} />
+            <Route path="/performance" element={<PerformancePage />} />
+            <Route path="/reviews" element={<ReviewsPage />} />
+            <Route path="/accounting" element={<AccountingPage />} />
+            <Route path="/balances" element={<BalancesPage />} />
+            <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/help" element={<HelpPage />} />
+            <Route path="/modules" element={<ModulesPage />} />
+            <Route path="/roadmap" element={<RoadmapPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </SessionContextProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
