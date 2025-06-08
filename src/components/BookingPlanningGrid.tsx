@@ -41,11 +41,13 @@ const BookingPlanningGrid: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        // Fetch reservations for the main property ID '1' (the global account ID)
-        // The Edge Function will now request 'with_rooms' to get room-specific data
-        const fetchedReservations = await fetchKrossbookingReservations('1'); 
-        setAllReservations(fetchedReservations);
-        console.log("All fetched reservations:", fetchedReservations); 
+        const fetchedReservationsPromises = properties.map(property => 
+          fetchKrossbookingReservations(property.id)
+        );
+        const results = await Promise.all(fetchedReservationsPromises);
+        const combinedReservations = results.flat(); // Flatten the array of arrays
+        setAllReservations(combinedReservations);
+        console.log("All fetched reservations:", combinedReservations); 
       } catch (err: any) {
         setError(`Erreur générale lors du chargement des réservations : ${err.message}`);
         console.error(err);

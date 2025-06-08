@@ -44,13 +44,13 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
       },
       body: JSON.stringify({
         action: 'get_reservations',
-        id_room: roomId, 
+        id_room: roomId, // Pass the specific room ID to the proxy
       }),
     });
 
-    console.log(`Response status from Edge Function: ${response.status}`);
+    console.log(`Response status from Edge Function for room ${roomId}: ${response.status}`);
     const responseText = await response.text();
-    console.log(`Raw response from Edge Function: ${responseText}`);
+    console.log(`Raw response from Edge Function for room ${roomId}: ${responseText}`);
 
     if (!response.ok) {
       let errorData;
@@ -64,16 +64,13 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
     }
 
     const krossbookingResponse = JSON.parse(responseText);
-    console.log("Parsed Krossbooking response from proxy:", krossbookingResponse); 
+    console.log(`Parsed Krossbooking response from proxy for room ${roomId}:`, krossbookingResponse); 
 
     if (krossbookingResponse && Array.isArray(krossbookingResponse.data)) {
       return krossbookingResponse.data.map((res: any) => ({
         id: res.id_reservation.toString(), 
         guest_name: res.label || 'N/A', 
-        // IMPORTANT: Use the id_room from the 'rooms' array if available, otherwise fallback to id_property
-        property_name: res.rooms && res.rooms.length > 0 && res.rooms[0].id_room 
-                       ? res.rooms[0].id_room.toString() 
-                       : res.id_property.toString(), 
+        property_name: roomId, // Assign the roomId directly as property_name
         check_in_date: res.arrival, 
         check_out_date: res.departure, 
         status: res.cod_reservation_status, 
