@@ -64,6 +64,7 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
     }
 
     const krossbookingResponse = JSON.parse(responseText);
+    console.log("Parsed Krossbooking response from proxy:", krossbookingResponse); // Added log
 
     // Check if krossbookingResponse.data exists and is an array
     if (krossbookingResponse && Array.isArray(krossbookingResponse.data)) {
@@ -72,6 +73,7 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
       const filteredReservations = krossbookingResponse.data.filter((res: any) => 
         res.id_property.toString() === roomId // Krossbooking response still uses id_property
       );
+      console.log(`Found ${filteredReservations.length} filtered reservations for room ID ${roomId}.`); // Added log
 
       return filteredReservations.map((res: any) => ({
         id: res.id_reservation.toString(), // Map id_reservation to id
