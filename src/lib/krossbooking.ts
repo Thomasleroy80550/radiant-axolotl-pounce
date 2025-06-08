@@ -23,20 +23,33 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
   try {
     console.log(`Attempting to fetch Krossbooking reservations for room ID: ${roomId}`);
 
+    // Get the current Supabase session to include the authorization token
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      console.error("Error getting Supabase session:", sessionError);
+      throw new Error("Could not retrieve Supabase session for authorization.");
+    }
+
+    if (!session) {
+      console.warn("No active Supabase session found. Cannot authorize Edge Function call.");
+      throw new Error("User not authenticated. Please log in.");
+    }
+
     const response = await fetch(KROSSBOOKING_PROXY_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // No need for Authorization header here unless the Edge Function itself requires client-side auth
+        'Authorization': `Bearer ${session.access_token}`, // Add the authorization header
       },
-      body: JSON.stringify({ // Manually stringify the body for a direct fetch call
+      body: JSON.stringify({
         action: 'get_reservations',
         room_id: roomId,
       }),
     });
 
     console.log(`Response status from Edge Function: ${response.status}`);
-    const responseText = await response.text(); // Read as text first to handle potential non-JSON errors
+    const responseText = await response.text();
     console.log(`Raw response from Edge Function: ${responseText}`);
 
     if (!response.ok) {
@@ -44,15 +57,14 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
       try {
         errorData = JSON.parse(responseText);
       } catch (e) {
-        errorData = responseText; // If not JSON, use raw text
+        errorData = responseText;
       }
       console.error("Error from Edge Function:", errorData);
       throw new Error(`Failed to fetch reservations: Edge Function returned a non-2xx status code. Details: ${JSON.stringify(errorData)}`);
     }
 
-    const krossbookingResponse = JSON.parse(responseText); // Parse the response as JSON
+    const krossbookingResponse = JSON.parse(responseText);
 
-    // Assuming the Edge Function returns the Krossbooking API response directly
     if (krossbookingResponse && krossbookingResponse.success && Array.isArray(krossbookingResponse.reservations)) {
       return krossbookingResponse.reservations.map((res: any) => ({
         id: res.id,
@@ -65,7 +77,6 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
       }));
     } else {
       console.warn("Unexpected Krossbooking API response structure:", krossbookingResponse);
-      // If the response is not as expected, log it and return an empty array
       return [];
     }
   } catch (error: any) {
