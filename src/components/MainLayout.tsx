@@ -30,6 +30,7 @@ const bottomNavigationItems = [
 ];
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+  console.log("MainLayout is rendering!"); // Added console log
   return (
     <div className="flex min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-50">
       {/* Sidebar */}
