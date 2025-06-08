@@ -23,16 +23,11 @@ interface Property {
   name: string;
 }
 
-// Define your properties here. For now, using a hardcoded list.
-// The 'id' here should correspond to the KROSSBOOKING_ROOM_ID you'd use for fetching.
+// Define your properties here with their actual Krossbooking room IDs
 const properties: Property[] = [
-  { id: '1', name: 'Toutes les propriétés' }, // Changed ID to '1' and name to be generic
-  // Vos propriétés spécifiques (Appartement Paris, Studio Nice, etc.)
-  // ne s'afficheront pas avec des réservations tant que nous n'aurons pas
-  // un moyen de les lier via les données de Krossbooking.
-  // { id: '62', name: 'Appartement Paris' },
-  // { id: '63', name: 'Studio Nice' },
-  // { id: '64', name: 'Maison Bordeaux' },
+  { id: '62', name: 'Appartement Paris' },
+  { id: '63', name: 'Studio Nice' },
+  { id: '64', name: 'Maison Bordeaux' },
 ];
 
 const BookingPlanningGrid: React.FC = () => {
@@ -46,7 +41,8 @@ const BookingPlanningGrid: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        // Fetch reservations for the main property ID '1'
+        // Fetch reservations for the main property ID '1' (the global account ID)
+        // The Edge Function will now request 'with_rooms' to get room-specific data
         const fetchedReservations = await fetchKrossbookingReservations('1'); 
         setAllReservations(fetchedReservations);
         console.log("All fetched reservations:", fetchedReservations); 

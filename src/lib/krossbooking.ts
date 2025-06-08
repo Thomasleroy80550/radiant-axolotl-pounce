@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface KrossbookingReservation {
   id: string;
   guest_name: string;
-  property_name: string; // This will now be the property ID from Krossbooking
+  property_name: string; // This will now be the actual room ID from Krossbooking
   check_in_date: string;
   check_out_date: string;
   status: string;
@@ -44,7 +44,7 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
       },
       body: JSON.stringify({
         action: 'get_reservations',
-        id_room: roomId, // Changed from room_id to id_room as per Krossbooking API doc
+        id_room: roomId, 
       }),
     });
 
@@ -64,24 +64,20 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
     }
 
     const krossbookingResponse = JSON.parse(responseText);
-    console.log("Parsed Krossbooking response from proxy:", krossbookingResponse); // Added log
+    console.log("Parsed Krossbooking response from proxy:", krossbookingResponse); 
 
-    // Check if krossbookingResponse.data exists and is an array
     if (krossbookingResponse && Array.isArray(krossbookingResponse.data)) {
-      // Removed client-side filtering by id_property to display all data returned by Krossbooking
-      // const filteredReservations = krossbookingResponse.data.filter((res: any) => 
-      //   res.id_property.toString() === roomId // Krossbooking response still uses id_property
-      // );
-      // console.log(`Found ${filteredReservations.length} filtered reservations for room ID ${roomId}.`); // Added log
-
       return krossbookingResponse.data.map((res: any) => ({
-        id: res.id_reservation.toString(), // Map id_reservation to id
-        guest_name: res.label || 'N/A', // Map label to guest_name
-        property_name: res.id_property.toString(), // Map id_property to property_name
-        check_in_date: res.arrival, // Map arrival to check_in_date
-        check_out_date: res.departure, // Map departure to check_out_date
-        status: res.cod_reservation_status, // Map cod_reservation_status to status
-        amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€', // Map charge_total_amount to amount
+        id: res.id_reservation.toString(), 
+        guest_name: res.label || 'N/A', 
+        // IMPORTANT: Use the id_room from the 'rooms' array if available, otherwise fallback to id_property
+        property_name: res.rooms && res.rooms.length > 0 && res.rooms[0].id_room 
+                       ? res.rooms[0].id_room.toString() 
+                       : res.id_property.toString(), 
+        check_in_date: res.arrival, 
+        check_out_date: res.departure, 
+        status: res.cod_reservation_status, 
+        amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€', 
       }));
     } else {
       console.warn("Unexpected Krossbooking API response structure or no data array:", krossbookingResponse);

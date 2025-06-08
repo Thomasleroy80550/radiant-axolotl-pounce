@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 const KROSSBOOKING_API_BASE_URL = "https://api.krossbooking.com/v5";
 
@@ -79,7 +80,7 @@ serve(async (req) => {
     console.log("Successfully obtained Krossbooking auth token.");
 
     let action: string | undefined;
-    let idRoom: string | undefined; // Changed from roomId to idRoom
+    let idRoom: string | undefined; 
 
     const contentLength = req.headers.get('content-length');
     console.log(`Received Content-Length: ${contentLength}`);
@@ -91,7 +92,7 @@ serve(async (req) => {
         try {
           const requestBody = await req.json();
           action = requestBody.action;
-          idRoom = requestBody.id_room; // Changed to id_room
+          idRoom = requestBody.id_room; 
         } catch (jsonParseError) {
           console.error("Error parsing request body as JSON:", jsonParseError);
           return new Response(JSON.stringify({ error: "Invalid JSON in request body." }), {
@@ -123,18 +124,21 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Received action: ${action}, id_room: ${idRoom}`); // Log id_room
+    console.log(`Received action: ${action}, id_room: ${idRoom}`); 
 
     let krossbookingUrl = '';
-    let krossbookingMethod = 'POST'; // Method is POST as per documentation
+    let krossbookingMethod = 'POST'; 
     let krossbookingBody: string | undefined;
 
     if (action === 'get_reservations') {
-      if (!idRoom) { // Check for idRoom
-        throw new Error("Missing 'id_room' parameter for 'get_reservations' action.");
+      const payload: any = {
+        with_rooms: true, // Add this parameter to retrieve room information
+      };
+      if (idRoom) {
+        payload.id_room = parseInt(idRoom); // Ensure id_room is an integer if provided
       }
       krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
-      krossbookingBody = JSON.stringify({ id_room: idRoom }); // Send id_room in body for POST
+      krossbookingBody = JSON.stringify(payload);
     } else {
       throw new Error(`Unsupported action: ${action}`);
     }
@@ -151,17 +155,15 @@ serve(async (req) => {
       body: krossbookingBody,
     });
 
-    // --- NEW ERROR HANDLING FOR KROSSBOOKING API RESPONSE ---
     if (!response.ok) {
       const errorBody = await response.text();
       console.error(`Krossbooking API returned non-OK status: ${response.status} ${response.statusText}`);
       console.error("Krossbooking API Error Body:", errorBody);
       throw new Error(`Krossbooking API error: ${response.status} ${response.statusText} - ${errorBody}`);
     }
-    // --- END NEW ERROR HANDLING ---
 
     const data = await response.json();
-    console.log("Krossbooking API response (full data):", data); // Log the full response
+    console.log("Krossbooking API response (full data):", data); 
 
     return new Response(JSON.stringify(data), {
       status: response.status,
