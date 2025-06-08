@@ -22,7 +22,7 @@ interface KrossbookingReservation {
 }
 
 // Définir l'ID et le nom de la chambre par défaut à afficher
-const defaultRoomId = '62'; // Remplacez par l'ID de la chambre Krossbooking que vous souhaitez afficher
+const defaultRoomId = '36'; // Remplacez par l'ID de la chambre Krossbooking que vous souhaitez afficher
 const defaultRoomName = 'Ma Chambre par défaut (2c)'; // Nom affiché pour cette chambre
 
 // Mapping des codes de canal Krossbooking vers des noms et couleurs Tailwind CSS
@@ -182,12 +182,15 @@ const BookingPlanningGrid: React.FC = () => {
                   // Utilise channel_identifier pour trouver les informations de couleur
                   const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
                   let barBorderRadius = '';
+                  let arrivalDepartureClasses = '';
 
                   if (isSameDay(effectiveStartDay, checkIn)) {
                     barBorderRadius += 'rounded-l-md ';
+                    arrivalDepartureClasses += ' border-l-4 border-green-300 '; // Green for arrival
                   }
                   if (isSameDay(effectiveEndDay, lastNight)) {
                     barBorderRadius += 'rounded-r-md ';
+                    arrivalDepartureClasses += ' border-r-4 border-red-300 '; // Red for departure
                   }
                   if (isSameDay(effectiveStartDay, checkIn) && isSameDay(effectiveEndDay, lastNight) && colSpan === 1) {
                     barBorderRadius = 'rounded-md'; 
@@ -198,13 +201,13 @@ const BookingPlanningGrid: React.FC = () => {
                   return (
                     <div
                       key={reservation.id}
-                      className={`absolute h-8 flex items-center justify-center text-xs font-semibold overflow-hidden whitespace-nowrap px-1 ${channelInfo.bgColor} ${channelInfo.textColor} ${barBorderRadius} shadow-sm cursor-pointer hover:opacity-90 transition-opacity`}
+                      className={`absolute h-8 flex items-center justify-center text-xs font-semibold overflow-hidden whitespace-nowrap px-1 ${channelInfo.bgColor} ${channelInfo.textColor} ${barBorderRadius} shadow-sm cursor-pointer hover:opacity-90 transition-opacity ${arrivalDepartureClasses}`}
                       style={{
                         gridRow: 'auto',
-                        top: `${(0 + 2) * 40 + 2}px`, // +2 for header rows, +2px for margin-top. '0' because it's the first (and only) property row.
+                        top: `${(0 + 2) * 40 + 4}px`, // +2 for header rows, +4px for margin-top/bottom (32px bar in 40px row)
                         left: `${150 + startColIndex * dayCellWidth}px`,
                         width: `${colSpan * dayCellWidth}px`,
-                        height: '36px',
+                        height: '32px', // Adjusted to 32px for better vertical centering with 4px padding
                       }}
                       title={`${reservation.guest_name} (${channelInfo.name}, ${reservation.status}) - Du ${format(checkIn, 'dd/MM', { locale: fr })} au ${format(lastNight, 'dd/MM', { locale: fr })}`}
                     >
@@ -226,6 +229,19 @@ const BookingPlanningGrid: React.FC = () => {
                 <span className="text-sm text-gray-700 dark:text-gray-300">{value.name}</span>
               </div>
             ))}
+          </div>
+          <div className="mt-4">
+            <h3 className="text-md font-semibold mb-2">Indicateurs</h3>
+            <div className="flex flex-wrap gap-4">
+              <div className="flex items-center">
+                <span className="w-4 h-4 border-l-4 border-green-300 bg-gray-200 dark:bg-gray-700 mr-2"></span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">Arrivée</span>
+              </div>
+              <div className="flex items-center">
+                <span className="w-4 h-4 border-r-4 border-red-300 bg-gray-200 dark:bg-gray-700 mr-2"></span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">Départ</span>
+              </div>
+            </div>
           </div>
         </div>
       </CardContent>
