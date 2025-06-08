@@ -51,8 +51,8 @@
     --sidebar-ring: 217.2 91.2% 59.8%;
 
     /* Custom calendar colors */
-    --calendar-arrival-border: 142.1 76.2% 36.3%; /* Green for arrival border */
-    --calendar-departure-border: 0 84.2% 60.2%; /* Red for departure border */
+    --calendar-arrival-line: 142.1 76.2% 36.3%; /* Green for arrival line */
+    --calendar-departure-line: 0 84.2% 60.2%; /* Red for departure line */
     --calendar-reserved-bg: 217.2 91.2% 85%; /* Light blue for middle nights */
     --calendar-reserved-fg: 222.2 47.4% 11.2%; /* Dark text for light background */
   }
@@ -95,8 +95,8 @@
     --sidebar-ring: 217.2 91.2% 59.8%;
 
     /* Custom calendar colors for dark mode */
-    --calendar-arrival-border: 142.1 76.2% 36.3%; /* Green for arrival border */
-    --calendar-departure-border: 0 62.8% 30.6%; /* Darker red for departure border */
+    --calendar-arrival-line: 142.1 76.2% 36.3%; /* Green for arrival line */
+    --calendar-departure-line: 0 62.8% 30.6%; /* Darker red for departure line */
     --calendar-reserved-bg: 217.2 32.6% 25%; /* Darker blue for middle nights */
     --calendar-reserved-fg: 210 40% 98%; /* Light text for dark background */
   }
@@ -114,25 +114,29 @@
 
 /* Custom styles for reserved dates in the calendar */
 .rdp-day_arrival {
-  background-color: transparent !important; /* No background color */
-  color: inherit !important; /* Keep default text color */
-  border-left: 3px solid hsl(var(--calendar-arrival-border)) !important;
-  border-radius: 0.25rem; /* Keep consistent border radius */
+  background-color: transparent !important;
+  color: inherit !important;
+  background-image: linear-gradient(to bottom right, transparent 48%, hsl(var(--calendar-arrival-line)) 48%, hsl(var(--calendar-arrival-line)) 52%, transparent 52%) !important;
+  background-size: 100% 100% !important;
+  background-repeat: no-repeat !important;
+  border-radius: 0.25rem;
 }
 
 .rdp-day_arrival:hover {
-  background-color: hsl(var(--calendar-arrival-border) / 0.1) !important; /* Subtle hover effect */
+  background-color: hsl(var(--calendar-arrival-line) / 0.1) !important; /* Subtle hover effect */
 }
 
 .rdp-day_departure {
-  background-color: transparent !important; /* No background color */
-  color: inherit !important; /* Keep default text color */
-  border-right: 3px solid hsl(var(--calendar-departure-border)) !important;
-  border-radius: 0.25rem; /* Keep consistent border radius */
+  background-color: transparent !important;
+  color: inherit !important;
+  background-image: linear-gradient(to bottom left, transparent 48%, hsl(var(--calendar-departure-line)) 48%, hsl(var(--calendar-departure-line)) 52%, transparent 52%) !important;
+  background-size: 100% 100% !important;
+  background-repeat: no-repeat !important;
+  border-radius: 0.25rem;
 }
 
 .rdp-day_departure:hover {
-  background-color: hsl(var(--calendar-departure-border) / 0.1) !important; /* Subtle hover effect */
+  background-color: hsl(var(--calendar-departure-line) / 0.1) !important; /* Subtle hover effect */
 }
 
 .rdp-day_reserved-middle {
