@@ -16,7 +16,9 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const path = url.pathname.replace('/krossbooking-proxy', ''); // Remove the function path
-    const query = url.searchParams.toString();
+    const query = url.searchParams.toString(); // This now correctly gets the query params from the Edge Function's URL
+
+    console.log("Edge Function received query params:", query); // Added for debugging
 
     // Construct the Krossbooking API URL
     const krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}?api_key=${KROSSBOOKING_API_KEY}&${query}`;
@@ -28,7 +30,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
         ...corsHeaders, // Apply CORS headers to the response
       },
-      body: req.body, // Pass the request body if any
+      // No body for GET requests here, as parameters are in the URL
     });
 
     const data = await response.json();

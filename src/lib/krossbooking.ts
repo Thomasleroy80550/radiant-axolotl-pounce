@@ -18,23 +18,18 @@ interface KrossbookingReservation {
  */
 export async function fetchKrossbookingReservations(roomId: string): Promise<KrossbookingReservation[]> {
   try {
-    // Construct the query parameters for the Krossbooking API call
-    // Assuming Krossbooking API uses 'action' and 'room_id' parameters
-    const queryParams = new URLSearchParams({
-      action: 'get_reservations', // This is an assumption, please verify with Krossbooking API docs
-      room_id: roomId,
-      // Add any other necessary parameters for the Krossbooking API
-    }).toString();
-
-    // Invoke the Supabase Edge Function
+    // Pass query parameters directly to the invoke method's 'query' option
+    // Supabase will append these to the Edge Function's URL
     const { data, error } = await supabase.functions.invoke('krossbooking-proxy', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      // Pass query parameters to the Edge Function
-      // The Edge Function will then forward these to the Krossbooking API
-      body: JSON.stringify({ query: queryParams }),
+      query: { // Correctly pass query parameters here
+        action: 'get_reservations', // This is an assumption, please verify with Krossbooking API docs
+        room_id: roomId,
+        // Add any other necessary parameters for the Krossbooking API
+      },
     });
 
     if (error) {
@@ -59,6 +54,7 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
       }));
     } else {
       console.warn("Unexpected Krossbooking API response structure:", krossbookingResponse);
+      // If the response is not as expected, log it and return an empty array
       return [];
     }
   } catch (error: any) {
