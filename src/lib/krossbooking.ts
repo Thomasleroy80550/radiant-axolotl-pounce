@@ -16,12 +16,12 @@ const KROSSBOOKING_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functio
 
 /**
  * Fetches reservations from Krossbooking API via the Supabase Edge Function proxy.
- * @param roomId The ID of the room/property to fetch reservations for.
+ * @param roomId The ID of the room/property to fetch reservations for. (No longer used for filtering in proxy, but kept for context)
  * @returns A promise that resolves to an array of KrossbookingReservation objects.
  */
 export async function fetchKrossbookingReservations(roomId: string): Promise<KrossbookingReservation[]> {
   try {
-    console.log(`Attempting to fetch Krossbooking reservations for room ID: ${roomId}`);
+    console.log(`Attempting to fetch Krossbooking reservations via proxy.`);
 
     // Get the current Supabase session to include the authorization token
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -44,13 +44,14 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
       },
       body: JSON.stringify({
         action: 'get_reservations',
-        id_room: roomId, // Pass the specific room ID to the proxy
+        // id_room is no longer sent to proxy for filtering, but can be sent for context if needed
+        id_room: roomId, 
       }),
     });
 
-    console.log(`Response status from Edge Function for room ${roomId}: ${response.status}`);
+    console.log(`Response status from Edge Function: ${response.status}`);
     const responseText = await response.text();
-    console.log(`Raw response from Edge Function for room ${roomId}: ${responseText}`);
+    console.log(`Raw response from Edge Function: ${responseText}`);
 
     if (!response.ok) {
       let errorData;
@@ -64,17 +65,19 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
     }
 
     const krossbookingResponse = JSON.parse(responseText);
-    console.log(`Parsed Krossbooking response from proxy for room ${roomId}:`, krossbookingResponse); 
+    console.log(`Parsed Krossbooking response from proxy (full data):`, krossbookingResponse); 
 
     if (krossbookingResponse && Array.isArray(krossbookingResponse.data)) {
       return krossbookingResponse.data.map((res: any) => {
-        // Extract the actual room ID from the reservation's rooms array
-        const actualRoomId = res.rooms && res.rooms.length > 0 ? res.rooms[0].id_room.toString() : roomId;
+        // Find the first valid room ID associated with the reservation
+        const associatedRoomId = res.rooms && res.rooms.length > 0 
+          ? res.rooms.find((room: any) => room.id_room != null)?.id_room.toString() || ''
+          : '';
         
         return {
           id: res.id_reservation.toString(), 
           guest_name: res.label || 'N/A', 
-          property_name: actualRoomId, // Use the actual room ID from the response
+          property_name: associatedRoomId, // Use the extracted room ID
           check_in_date: res.arrival, 
           check_out_date: res.departure, 
           status: res.cod_reservation_status, 

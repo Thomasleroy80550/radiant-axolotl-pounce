@@ -80,7 +80,8 @@ serve(async (req) => {
     console.log("Successfully obtained Krossbooking auth token.");
 
     let action: string | undefined;
-    let requestedRoomId: string | undefined; // Renamed to avoid confusion
+    // requestedRoomId is no longer used for filtering in the Edge Function
+    // let requestedRoomId: string | undefined; 
 
     const contentLength = req.headers.get('content-length');
     console.log(`Received Content-Length: ${contentLength}`);
@@ -92,7 +93,7 @@ serve(async (req) => {
         try {
           const requestBody = await req.json();
           action = requestBody.action;
-          requestedRoomId = requestBody.id_room; // Store the requested room ID
+          // requestedRoomId = requestBody.id_room; // No longer used for filtering here
         } catch (jsonParseError) {
           console.error("Error parsing request body as JSON:", jsonParseError);
           return new Response(JSON.stringify({ error: "Invalid JSON in request body." }), {
@@ -124,14 +125,14 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Received action: ${action}, requested_room_id: ${requestedRoomId}`); 
+    console.log(`Received action: ${action}`); 
 
     let krossbookingUrl = '';
     let krossbookingMethod = 'POST'; 
     let krossbookingBody: string | undefined;
 
     if (action === 'get_reservations') {
-      // Do NOT pass id_room to Krossbooking API directly, fetch all and filter later
+      // Always fetch all reservations with rooms data
       const payload: any = {
         with_rooms: true, 
       };
@@ -161,30 +162,10 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log("Krossbooking API response (full data, before filtering):", data); 
+    console.log("Krossbooking API response (full data, no filtering applied in Edge Function):", data); 
 
-    let filteredData = data.data || [];
-
-    // Apply filtering by requestedRoomId here in the Edge Function
-    if (requestedRoomId) {
-      filteredData = filteredData.filter((reservation: any) => {
-        // Check if any room in the reservation matches the requestedRoomId
-        return reservation.rooms && reservation.rooms.some((room: any) => {
-          // Add explicit check for null/undefined id_room
-          if (room.id_room == null) {
-            console.warn(`DEBUG_EDGE: room.id_room is null or undefined for reservation ID: ${reservation.id_reservation}. Skipping this room for filtering.`);
-            return false; // Skip this room if id_room is null/undefined
-          }
-          return room.id_room.toString() === requestedRoomId;
-        });
-      });
-      console.log(`DEBUG_EDGE: Filtered data for room ${requestedRoomId} (count: ${filteredData.length}):`, filteredData); // Added log
-    } else {
-      console.log(`DEBUG_EDGE: No requestedRoomId provided. Returning all data (count: ${filteredData.length}):`, filteredData); // Added log
-    }
-
-
-    return new Response(JSON.stringify({ data: filteredData, total_count: filteredData.length, count: filteredData.length, limit: data.limit, offset: data.offset }), {
+    // Return all data received from Krossbooking API
+    return new Response(JSON.stringify({ data: data.data || [], total_count: data.total_count, count: data.count, limit: data.limit, offset: data.offset }), {
       status: response.status,
       headers: {
         'Content-Type': 'application/json',
