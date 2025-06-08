@@ -26,10 +26,13 @@ interface Property {
 // Define your properties here. For now, using a hardcoded list.
 // The 'id' here should correspond to the KROSSBOOKING_ROOM_ID you'd use for fetching.
 const properties: Property[] = [
-  { id: '62', name: 'Appartement Paris' }, // Reverted ID to '62'
-  { id: '63', name: 'Studio Nice' },      // Reverted ID to '63'
-  { id: '64', name: 'Maison Bordeaux' },  // Reverted ID to '64'
-  // Add more properties as needed, with their corresponding Krossbooking room IDs
+  { id: '1', name: 'Toutes les propriétés' }, // Changed ID to '1' and name to be generic
+  // Vos propriétés spécifiques (Appartement Paris, Studio Nice, etc.)
+  // ne s'afficheront pas avec des réservations tant que nous n'aurons pas
+  // un moyen de les lier via les données de Krossbooking.
+  // { id: '62', name: 'Appartement Paris' },
+  // { id: '63', name: 'Studio Nice' },
+  // { id: '64', name: 'Maison Bordeaux' },
 ];
 
 const BookingPlanningGrid: React.FC = () => {
@@ -43,8 +46,7 @@ const BookingPlanningGrid: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        // Fetch reservations only once for the common property ID '1'
-        // If Krossbooking API truly returns all reservations for the hotel under id_property: 1
+        // Fetch reservations for the main property ID '1'
         const fetchedReservations = await fetchKrossbookingReservations('1'); 
         setAllReservations(fetchedReservations);
         console.log("All fetched reservations:", fetchedReservations); 
@@ -171,7 +173,7 @@ const BookingPlanningGrid: React.FC = () => {
 
                     // Calculate the actual start and end day within the current month's visible range
                     const effectiveStartDay = checkIn < monthStart ? monthStart : checkIn;
-                    const effectiveEndDay = lastNight > monthEnd ? monthEnd : lastOut;
+                    const effectiveEndDay = lastNight > monthEnd ? monthEnd : lastNight;
 
                     // Calculate column start and span based on daysInMonth array
                     const startColIndex = daysInMonth.findIndex(d => isSameDay(d, effectiveStartDay));
