@@ -8,7 +8,7 @@ interface KrossbookingReservation {
   check_out_date: string;
   status: string;
   amount: string;
-  // Add other fields as per Krossbooking API response
+  channel_id?: string; // Added to store the OTA channel ID
 }
 
 // Define the base URL for your Supabase Edge Function
@@ -16,12 +16,12 @@ const KROSSBOOKING_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functio
 
 /**
  * Fetches reservations from Krossbooking API via the Supabase Edge Function proxy.
- * @param roomId The ID of the room/property to fetch reservations for. (No longer used for filtering in proxy, but kept for context)
+ * @param roomId The ID of the room/property to fetch reservations for.
  * @returns A promise that resolves to an array of KrossbookingReservation objects.
  */
 export async function fetchKrossbookingReservations(roomId: string): Promise<KrossbookingReservation[]> {
   try {
-    console.log(`Attempting to fetch Krossbooking reservations via proxy.`);
+    console.log(`Attempting to fetch Krossbooking reservations via proxy for room: ${roomId}`);
 
     // Get the current Supabase session to include the authorization token
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -44,8 +44,7 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
       },
       body: JSON.stringify({
         action: 'get_reservations',
-        // id_room is no longer sent to proxy for filtering, but can be sent for context if needed
-        id_room: roomId, 
+        id_room: roomId, // Pass the specific room ID to the Edge Function
       }),
     });
 
@@ -69,19 +68,22 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
 
     if (krossbookingResponse && Array.isArray(krossbookingResponse.data)) {
       return krossbookingResponse.data.map((res: any) => {
-        // Find the first valid room ID associated with the reservation
-        const associatedRoomId = res.rooms && res.rooms.length > 0 
-          ? res.rooms.find((room: any) => room.id_room != null)?.id_room.toString() || ''
-          : '';
+        // Find the room entry that matches the requested roomId
+        const associatedRoom = res.rooms?.find((room: any) => room.id_room?.toString() === roomId);
+        
+        const propertyId = associatedRoom?.id_room?.toString() || '';
+        // Default to 'DIRECT' if no channel is found or if the room doesn't match the requested ID
+        const channelId = associatedRoom?.id_channel?.toString() || 'DIRECT'; 
         
         return {
           id: res.id_reservation.toString(), 
           guest_name: res.label || 'N/A', 
-          property_name: associatedRoomId, // Use the extracted room ID
+          property_name: propertyId, // Use the extracted room ID
           check_in_date: res.arrival, 
           check_out_date: res.departure, 
           status: res.cod_reservation_status, 
           amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€', 
+          channel_id: channelId, // Add the channel ID
         };
       });
     } else {

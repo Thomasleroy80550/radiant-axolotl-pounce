@@ -16,15 +16,25 @@ interface KrossbookingReservation {
   check_out_date: string;
   status: string;
   amount: string;
+  channel_id?: string; // Added to store the OTA channel ID
 }
 
 // Définir l'ID et le nom de la chambre par défaut à afficher
-const defaultRoomId = '62'; // Remplacez par l'ID de la chambre Krossbooking que vous souhaitez afficher
+const defaultRoomId = '36'; // Remplacez par l'ID de la chambre Krossbooking que vous souhaitez afficher
 const defaultRoomName = 'Ma Chambre par défaut (2c)'; // Nom affiché pour cette chambre
+
+// Mapping des IDs de canal Krossbooking vers des noms et couleurs
+const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
+  '1': { name: 'Airbnb', bgColor: 'bg-red-600', textColor: 'text-white' },
+  '2': { name: 'Booking.com', bgColor: 'bg-blue-700', textColor: 'text-white' },
+  '4': { name: 'Abritel', bgColor: 'bg-orange-600', textColor: 'text-white' },
+  'DIRECT': { name: 'Direct', bgColor: 'bg-purple-600', textColor: 'text-white' },
+  'UNKNOWN': { name: 'Autre', bgColor: 'bg-gray-600', textColor: 'text-white' },
+};
 
 const BookingPlanningGrid: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [reservations, setReservations] = useState<KrossbookingReservation[]>([]); // Renommé pour plus de clarté
+  const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,7 +44,6 @@ const BookingPlanningGrid: React.FC = () => {
       setError(null);
       try {
         console.log(`DEBUG: Fetching reservations for single room ID: ${defaultRoomId}`);
-        // Appelle la fonction Edge avec l'ID de la chambre spécifique
         const fetchedReservations = await fetchKrossbookingReservations(defaultRoomId);
         setReservations(fetchedReservations);
         console.log("DEBUG: Fetched reservations for default room:", fetchedReservations); 
@@ -140,32 +149,24 @@ const BookingPlanningGrid: React.FC = () => {
               ))}
 
               {/* Reservation Bars (Overlay) */}
-              {reservations // 'reservations' contient déjà les données filtrées par la fonction Edge
+              {reservations
                 .map((reservation) => {
                   const checkIn = parseISO(reservation.check_in_date);
-                  // Krossbooking check_out_date is the day *after* the last night.
-                  // For planning, we want to show the reservation *up to and including* the last night.
-                  // So, the effective last night is check_out_date - 1 day.
                   const lastNight = addDays(parseISO(reservation.check_out_date), -1);
 
                   const monthStart = startOfMonth(currentMonth);
                   const monthEnd = endOfMonth(currentMonth);
 
-                  // Determine if the reservation overlaps with the current month
                   const overlapsWithMonth = 
                     (checkIn <= monthEnd && lastNight >= monthStart);
 
                   if (!overlapsWithMonth) {
-                    return null; // Reservation is completely outside the current month
+                    return null;
                   }
 
-                  // Calculate the actual start and end day within the current month's visible range
                   const effectiveStartDay = checkIn < monthStart ? monthStart : checkIn;
                   const effectiveEndDay = lastNight > monthEnd ? monthEnd : lastNight;
 
-                  // Calculate column start and span based on daysInMonth array
-                  // daysInInterval returns an array of dates, its length gives us the count of days.
-                  // We subtract 1 to get a 0-indexed position for array access.
                   const startColIndex = eachDayOfInterval({ start: monthStart, end: effectiveStartDay }).length - 1;
                   const endColIndex = eachDayOfInterval({ start: monthStart, end: effectiveEndDay }).length - 1;
 
@@ -176,55 +177,33 @@ const BookingPlanningGrid: React.FC = () => {
 
                   const colSpan = endColIndex - startColIndex + 1;
 
-                  let backgroundColor = 'bg-blue-500'; // Default color
-                  let textColor = 'text-white';
+                  const channelInfo = channelColors[reservation.channel_id || 'UNKNOWN'] || channelColors['UNKNOWN'];
                   let barBorderRadius = '';
 
-                  switch (reservation.status) {
-                    case 'CONFIRMED':
-                      backgroundColor = 'bg-green-500';
-                      break;
-                    case 'PENDING':
-                      backgroundColor = 'bg-yellow-500';
-                      break;
-                    case 'CANCELLED':
-                      backgroundColor = 'bg-red-500';
-                      break;
-                    default:
-                      backgroundColor = 'bg-gray-500';
-                  }
-
-                  // Determine if the bar should have rounded corners on the left/right
-                  // Only round if the effective start/end is the actual reservation start/end
                   if (isSameDay(effectiveStartDay, checkIn)) {
                     barBorderRadius += 'rounded-l-md ';
                   }
                   if (isSameDay(effectiveEndDay, lastNight)) {
                     barBorderRadius += 'rounded-r-md ';
                   }
-                  // If it's a single day reservation or fully contained within the month and not spanning
                   if (isSameDay(effectiveStartDay, checkIn) && isSameDay(effectiveEndDay, lastNight) && colSpan === 1) {
                     barBorderRadius = 'rounded-md'; 
                   } else if (isSameDay(effectiveStartDay, checkIn) && isSameDay(effectiveEndDay, lastNight) && colSpan > 1) {
                     barBorderRadius = 'rounded-md';
                   }
 
-
-                  console.log(`DEBUG: Drawing reservation ${reservation.id} for property ${reservation.property_name}. Dates: ${format(checkIn, 'yyyy-MM-dd')} to ${format(lastNight, 'yyyy-MM-dd')} (last night). Effective: ${format(effectiveStartDay, 'yyyy-MM-dd')} to ${format(effectiveEndDay, 'yyyy-MM-dd')}. Grid: col ${startColIndex + 1} / span ${colSpan}`);
-
                   return (
                     <div
                       key={reservation.id}
-                      className={`absolute h-8 flex items-center justify-center text-xs font-semibold overflow-hidden whitespace-nowrap px-1 ${backgroundColor} ${textColor} ${barBorderRadius} shadow-sm cursor-pointer hover:opacity-90 transition-opacity`}
+                      className={`absolute h-8 flex items-center justify-center text-xs font-semibold overflow-hidden whitespace-nowrap px-1 ${channelInfo.bgColor} ${channelInfo.textColor} ${barBorderRadius} shadow-sm cursor-pointer hover:opacity-90 transition-opacity`}
                       style={{
-                        // gridColumn: `${gridColumnStart} / span ${colSpan}`, // This is for grid-template-columns, not absolute positioning
-                        gridRow: 'auto', // This ensures it's within the current property's row
+                        gridRow: 'auto',
                         top: `${(0 + 2) * 40 + 2}px`, // +2 for header rows, +2px for margin-top. '0' because it's the first (and only) property row.
-                        left: `${150 + startColIndex * dayCellWidth}px`, // 150px for property name column, then start at correct day
-                        width: `${colSpan * dayCellWidth}px`, // Width based on span
-                        height: '36px', // Slightly less than row height for visual spacing
+                        left: `${150 + startColIndex * dayCellWidth}px`,
+                        width: `${colSpan * dayCellWidth}px`,
+                        height: '36px',
                       }}
-                      title={`${reservation.guest_name} (${reservation.status}) - Du ${format(checkIn, 'dd/MM', { locale: fr })} au ${format(lastNight, 'dd/MM', { locale: fr })}`}
+                      title={`${reservation.guest_name} (${channelInfo.name}, ${reservation.status}) - Du ${format(checkIn, 'dd/MM', { locale: fr })} au ${format(lastNight, 'dd/MM', { locale: fr })}`}
                     >
                       {reservation.guest_name}
                     </div>
@@ -233,6 +212,19 @@ const BookingPlanningGrid: React.FC = () => {
             </React.Fragment>
           </div>
         )}
+
+        {/* Legend for OTA Platforms */}
+        <div className="mt-8 p-4 border rounded-md bg-gray-50 dark:bg-gray-800">
+          <h3 className="text-md font-semibold mb-3">Légende des plateformes</h3>
+          <div className="flex flex-wrap gap-4">
+            {Object.entries(channelColors).map(([key, value]) => (
+              <div key={key} className="flex items-center">
+                <span className={`w-4 h-4 rounded-full mr-2 ${value.bgColor}`}></span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">{value.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
