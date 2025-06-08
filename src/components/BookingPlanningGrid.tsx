@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addDays } from 'date-fns';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addDays, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale'; // Pour le formatage en français
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,6 +31,7 @@ const channelColors: { [key: string]: { name: string; bgColor: string; textColor
   'BOOKING': { name: 'Booking.com', bgColor: 'bg-blue-700', textColor: 'text-white' },
   'ABRITEL': { name: 'Abritel', bgColor: 'bg-orange-600', textColor: 'text-white' },
   'DIRECT': { name: 'Direct', bgColor: 'bg-purple-600', textColor: 'text-white' },
+  'HELLOKEYS': { name: 'Hello Keys', bgColor: 'bg-green-600', textColor: 'text-white' }, // Added Hello Keys
   'UNKNOWN': { name: 'Autre', bgColor: 'bg-gray-600', textColor: 'text-white' },
 };
 
@@ -154,7 +155,8 @@ const BookingPlanningGrid: React.FC = () => {
               {reservations
                 .map((reservation) => {
                   const checkIn = parseISO(reservation.check_in_date);
-                  const lastNight = addDays(parseISO(reservation.check_out_date), -1);
+                  const checkOut = parseISO(reservation.check_out_date);
+                  const lastNight = addDays(checkOut, -1); // The last night the guest stays
 
                   const monthStart = startOfMonth(currentMonth);
                   const monthEnd = endOfMonth(currentMonth);
@@ -181,37 +183,37 @@ const BookingPlanningGrid: React.FC = () => {
 
                   // Utilise channel_identifier pour trouver les informations de couleur
                   const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
-                  let barBorderRadius = '';
-                  let arrivalDepartureClasses = '';
-
+                  
+                  let barBorderClasses = 'rounded-none'; // Default to no rounding
+                  
+                  // Check if the visible start of the bar is the actual check-in date
                   if (isSameDay(effectiveStartDay, checkIn)) {
-                    barBorderRadius += 'rounded-l-md ';
-                    arrivalDepartureClasses += ' border-l-4 border-green-300 '; // Green for arrival
+                    barBorderClasses += ' rounded-l-full';
                   }
+                  // Check if the visible end of the bar is the actual last night date
                   if (isSameDay(effectiveEndDay, lastNight)) {
-                    barBorderRadius += 'rounded-r-md ';
-                    arrivalDepartureClasses += ' border-r-4 border-red-300 '; // Red for departure
+                    barBorderClasses += ' rounded-r-full';
                   }
-                  if (isSameDay(effectiveStartDay, checkIn) && isSameDay(effectiveEndDay, lastNight) && colSpan === 1) {
-                    barBorderRadius = 'rounded-md'; 
-                  } else if (isSameDay(effectiveStartDay, checkIn) && isSameDay(effectiveEndDay, lastNight) && colSpan > 1) {
-                    barBorderRadius = 'rounded-md';
-                  }
+
+                  const numberOfNights = differenceInDays(checkOut, checkIn);
 
                   return (
                     <div
                       key={reservation.id}
-                      className={`absolute h-8 flex items-center justify-center text-xs font-semibold overflow-hidden whitespace-nowrap px-1 ${channelInfo.bgColor} ${channelInfo.textColor} ${barBorderRadius} shadow-sm cursor-pointer hover:opacity-90 transition-opacity ${arrivalDepartureClasses}`}
+                      className={`absolute h-9 flex items-center justify-start text-xs font-semibold overflow-hidden whitespace-nowrap px-2 ${channelInfo.bgColor} ${channelInfo.textColor} ${barBorderClasses} shadow-sm cursor-pointer hover:opacity-90 transition-opacity`}
                       style={{
                         gridRow: 'auto',
-                        top: `${(0 + 2) * 40 + 4}px`, // +2 for header rows, +4px for margin-top/bottom (32px bar in 40px row)
+                        top: `${(0 + 2) * 40 + 2}px`, // +2 for header rows, +2px for margin-top. '0' because it's the first (and only) property row.
                         left: `${150 + startColIndex * dayCellWidth}px`,
                         width: `${colSpan * dayCellWidth}px`,
-                        height: '32px', // Adjusted to 32px for better vertical centering with 4px padding
+                        height: '36px', // Adjusted to 36px for better vertical centering
                       }}
-                      title={`${reservation.guest_name} (${channelInfo.name}, ${reservation.status}) - Du ${format(checkIn, 'dd/MM', { locale: fr })} au ${format(lastNight, 'dd/MM', { locale: fr })}`}
+                      title={`${reservation.guest_name} (${channelInfo.name}, ${reservation.status}) - Du ${format(checkIn, 'dd/MM', { locale: fr })} au ${format(checkOut, 'dd/MM', { locale: fr })}`}
                     >
-                      {reservation.guest_name}
+                      <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
+                      <span className="mr-1">€ {numberOfNights}</span>
+                      <span className="mx-1">|</span>
+                      <span className="truncate">{reservation.guest_name}</span>
                     </div>
                   );
                 })}
@@ -229,19 +231,6 @@ const BookingPlanningGrid: React.FC = () => {
                 <span className="text-sm text-gray-700 dark:text-gray-300">{value.name}</span>
               </div>
             ))}
-          </div>
-          <div className="mt-4">
-            <h3 className="text-md font-semibold mb-2">Indicateurs</h3>
-            <div className="flex flex-wrap gap-4">
-              <div className="flex items-center">
-                <span className="w-4 h-4 border-l-4 border-green-300 bg-gray-200 dark:bg-gray-700 mr-2"></span>
-                <span className="text-sm text-gray-700 dark:text-gray-300">Arrivée</span>
-              </div>
-              <div className="flex items-center">
-                <span className="w-4 h-4 border-r-4 border-red-300 bg-gray-200 dark:bg-gray-700 mr-2"></span>
-                <span className="text-sm text-gray-700 dark:text-gray-300">Départ</span>
-              </div>
-            </div>
           </div>
         </div>
       </CardContent>
