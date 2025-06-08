@@ -67,15 +67,20 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
     console.log(`Parsed Krossbooking response from proxy for room ${roomId}:`, krossbookingResponse); 
 
     if (krossbookingResponse && Array.isArray(krossbookingResponse.data)) {
-      return krossbookingResponse.data.map((res: any) => ({
-        id: res.id_reservation.toString(), 
-        guest_name: res.label || 'N/A', 
-        property_name: roomId, // Assign the roomId directly as property_name
-        check_in_date: res.arrival, 
-        check_out_date: res.departure, 
-        status: res.cod_reservation_status, 
-        amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€', 
-      }));
+      return krossbookingResponse.data.map((res: any) => {
+        // Extract the actual room ID from the reservation's rooms array
+        const actualRoomId = res.rooms && res.rooms.length > 0 ? res.rooms[0].id_room.toString() : roomId;
+        
+        return {
+          id: res.id_reservation.toString(), 
+          guest_name: res.label || 'N/A', 
+          property_name: actualRoomId, // Use the actual room ID from the response
+          check_in_date: res.arrival, 
+          check_out_date: res.departure, 
+          status: res.cod_reservation_status, 
+          amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€', 
+        };
+      });
     } else {
       console.warn("Unexpected Krossbooking API response structure or no data array:", krossbookingResponse);
       return [];
