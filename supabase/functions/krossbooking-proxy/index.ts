@@ -79,7 +79,7 @@ serve(async (req) => {
     console.log("Successfully obtained Krossbooking auth token.");
 
     let action: string | undefined;
-    let roomId: string | undefined;
+    let idRoom: string | undefined; // Changed from roomId to idRoom
 
     const contentLength = req.headers.get('content-length');
     console.log(`Received Content-Length: ${contentLength}`);
@@ -91,7 +91,7 @@ serve(async (req) => {
         try {
           const requestBody = await req.json();
           action = requestBody.action;
-          roomId = requestBody.room_id;
+          idRoom = requestBody.id_room; // Changed to id_room
         } catch (jsonParseError) {
           console.error("Error parsing request body as JSON:", jsonParseError);
           return new Response(JSON.stringify({ error: "Invalid JSON in request body." }), {
@@ -123,18 +123,18 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Received action: ${action}, room_id: ${roomId}`);
+    console.log(`Received action: ${action}, id_room: ${idRoom}`); // Log id_room
 
     let krossbookingUrl = '';
     let krossbookingMethod = 'POST'; // Method is POST as per documentation
     let krossbookingBody: string | undefined;
 
     if (action === 'get_reservations') {
-      if (!roomId) {
-        throw new Error("Missing 'room_id' parameter for 'get_reservations' action.");
+      if (!idRoom) { // Check for idRoom
+        throw new Error("Missing 'id_room' parameter for 'get_reservations' action.");
       }
       krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
-      krossbookingBody = JSON.stringify({ room_id: roomId }); // Send room_id in body for POST
+      krossbookingBody = JSON.stringify({ id_room: idRoom }); // Send id_room in body for POST
     } else {
       throw new Error(`Unsupported action: ${action}`);
     }

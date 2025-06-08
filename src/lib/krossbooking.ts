@@ -44,7 +44,7 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
       },
       body: JSON.stringify({
         action: 'get_reservations',
-        room_id: roomId, // Still send room_id, even if API doesn't filter, for consistency
+        id_room: roomId, // Changed from room_id to id_room as per Krossbooking API doc
       }),
     });
 
@@ -68,8 +68,9 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
     // Check if krossbookingResponse.data exists and is an array
     if (krossbookingResponse && Array.isArray(krossbookingResponse.data)) {
       // Filter reservations by the requested roomId (id_property)
+      // The Krossbooking API should now filter by id_room, but we keep this for robustness
       const filteredReservations = krossbookingResponse.data.filter((res: any) => 
-        res.id_property.toString() === roomId
+        res.id_property.toString() === roomId // Krossbooking response still uses id_property
       );
 
       return filteredReservations.map((res: any) => ({
