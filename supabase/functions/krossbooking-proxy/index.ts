@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
-const KROSSBOOKING_API_BASE_URL = "https://api.krossbooking.com/v5"; // Updated base URL
+const KROSSBOOKING_API_BASE_URL = "https://api.krossbooking.com/v5";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,33 +14,45 @@ async function getAuthToken(): Promise<string> {
   const KROSSBOOKING_USERNAME = Deno.env.get('KROSSBOOKING_USERNAME');
   const KROSSBOOKING_PASSWORD = Deno.env.get('KROSSBOOKING_PASSWORD');
 
+  console.log("--- Krossbooking Auth Attempt ---");
+  console.log(`API Key (first 5 chars): ${KROSSBOOKING_API_KEY ? KROSSBOOKING_API_KEY.substring(0, 5) + '...' : 'NOT SET'}`);
+  console.log(`Hotel ID: ${KROSSBOOKING_HOTEL_ID || 'NOT SET'}`);
+  console.log(`Username: ${KROSSBOOKING_USERNAME || 'NOT SET'}`);
+  console.log(`Password (first 5 chars): ${KROSSBOOKING_PASSWORD ? KROSSBOOKING_PASSWORD.substring(0, 5) + '...' : 'NOT SET'}`);
+
   if (!KROSSBOOKING_API_KEY || !KROSSBOOKING_HOTEL_ID || !KROSSBOOKING_USERNAME || !KROSSBOOKING_PASSWORD) {
     throw new Error("Missing Krossbooking API credentials in environment variables.");
   }
 
-  console.log("Attempting to get Krossbooking auth token...");
+  const authPayload = {
+    api_key: KROSSBOOKING_API_KEY,
+    hotel_id: KROSSBOOKING_HOTEL_ID,
+    username: KROSSBOOKING_USERNAME,
+    password: KROSSBOOKING_PASSWORD,
+  };
+
+  console.log("Auth Payload sent:", JSON.stringify(authPayload));
+
   const response = await fetch(`${KROSSBOOKING_API_BASE_URL}/auth/get-token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       ...corsHeaders,
     },
-    body: JSON.stringify({
-      api_key: KROSSBOOKING_API_KEY,
-      hotel_id: KROSSBOOKING_HOTEL_ID,
-      username: KROSSBOOKING_USERNAME,
-      password: KROSSBOOKING_PASSWORD,
-    }),
+    body: JSON.stringify(authPayload),
   });
+
+  console.log(`Krossbooking Auth Response Status: ${response.status}`);
+  console.log(`Krossbooking Auth Response Status Text: ${response.statusText}`);
 
   if (!response.ok) {
     const errorData = await response.json();
-    console.error("Failed to get Krossbooking token:", response.status, errorData);
+    console.error("Failed to get Krossbooking token. Error data:", errorData);
     throw new Error(`Failed to get Krossbooking token: ${response.statusText} - ${JSON.stringify(errorData)}`);
   }
 
   const data = await response.json();
-  console.log("Krossbooking token response:", data);
+  console.log("Krossbooking token response data:", data);
   if (data && data.token) {
     return data.token;
   } else {
@@ -59,21 +71,8 @@ serve(async (req) => {
     console.log("Successfully obtained Krossbooking auth token.");
 
     const url = new URL(req.url);
-    // The path will be something like /krossbooking-proxy?action=get_reservations&room_id=1
-    // We need to extract the actual Krossbooking endpoint path from the query parameters
-    // Assuming the client passes the Krossbooking endpoint as a query parameter, e.g., `endpoint=reservations`
-    // Or, more simply, we can assume the proxy is only for specific actions like 'get_reservations'
-    // For now, let's assume the 'action' query parameter dictates the Krossbooking API path.
-    // This needs to be clarified with Krossbooking API docs for specific endpoints.
-    // For 'get_reservations', the doc doesn't specify a direct endpoint like /reservations,
-    // but rather parameters for the base URL. Let's stick to passing all query params.
+    const queryParams = url.searchParams.toString();
 
-    const queryParams = url.searchParams.toString(); // Gets all query params from the Edge Function's URL
-
-    // Construct the Krossbooking API URL with all query parameters
-    // The Krossbooking API documentation implies that parameters like 'action' and 'room_id'
-    // are part of the query string for the base API URL, not separate paths.
-    // Example: https://api.krossbooking.com/v5?action=get_reservations&room_id=1
     const krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}?${queryParams}`;
     console.log("Calling Krossbooking API with token:", krossbookingUrl);
 
@@ -81,10 +80,9 @@ serve(async (req) => {
       method: req.method,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`, // Include the Bearer token
+        'Authorization': `Bearer ${authToken}`,
         ...corsHeaders,
       },
-      // No body for GET requests here, as parameters are in the URL
     });
 
     const data = await response.json();
@@ -97,7 +95,7 @@ serve(async (req) => {
         ...corsHeaders,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in krossbooking-proxy function:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
