@@ -11,7 +11,7 @@ import { fetchKrossbookingReservations } from '@/lib/krossbooking';
 interface KrossbookingReservation {
   id: string;
   guest_name: string;
-  property_name: string; // This will now be the property ID from Krossbooking
+  property_name: string; // This will now be the actual room ID from Krossbooking
   check_in_date: string;
   check_out_date: string;
   status: string;
@@ -47,10 +47,10 @@ const BookingPlanningGrid: React.FC = () => {
         const results = await Promise.all(fetchedReservationsPromises);
         const combinedReservations = results.flat(); // Flatten the array of arrays
         setAllReservations(combinedReservations);
-        console.log("All fetched reservations:", combinedReservations); 
+        console.log("DEBUG: All fetched reservations (combined):", combinedReservations); 
       } catch (err: any) {
         setError(`Erreur générale lors du chargement des réservations : ${err.message}`);
-        console.error(err);
+        console.error("DEBUG: Error in loadAllReservations:", err);
       } finally {
         setLoading(false);
       }
@@ -133,107 +133,120 @@ const BookingPlanningGrid: React.FC = () => {
             ))}
 
             {/* Property Rows */}
-            {properties.map((property) => (
-              <React.Fragment key={property.id}>
-                {/* Property Name Cell */}
-                <div className="grid-cell property-name-cell sticky left-0 z-10 bg-white dark:bg-gray-950 border-r border-b flex items-center px-2">
-                  <Home className="h-4 w-4 mr-2 text-gray-500" />
-                  <span className="font-medium text-sm">{property.name}</span>
-                </div>
+            {properties.map((property) => {
+              console.log(`DEBUG: Processing property: ${property.name} (ID: ${property.id})`);
+              const reservationsForThisProperty = allReservations.filter(res => {
+                const isMatch = res.property_name === property.id;
+                if (!isMatch) {
+                  console.log(`DEBUG: Mismatch - Reservation ID: ${res.id}, Expected property_name: ${property.id}, Actual property_name: ${res.property_name}`);
+                }
+                return isMatch;
+              });
+              console.log(`DEBUG: Found ${reservationsForThisProperty.length} reservations for property ${property.id}.`);
 
-                {/* Day Cells (Background Grid) */}
-                {daysInMonth.map((day, dayIndex) => (
-                  <div
-                    key={`${property.id}-${format(day, 'yyyy-MM-dd')}-bg`}
-                    className={`grid-cell border-b border-r ${isSameDay(day, new Date()) ? 'bg-blue-50 dark:bg-blue-950' : 'bg-gray-50 dark:bg-gray-800'}`}
-                    style={{ width: `${dayCellWidth}px` }}
-                  ></div>
-                ))}
+              return (
+                <React.Fragment key={property.id}>
+                  {/* Property Name Cell */}
+                  <div className="grid-cell property-name-cell sticky left-0 z-10 bg-white dark:bg-gray-950 border-r border-b flex items-center px-2">
+                    <Home className="h-4 w-4 mr-2 text-gray-500" />
+                    <span className="font-medium text-sm">{property.name}</span>
+                  </div>
 
-                {/* Reservation Bars (Overlay) */}
-                {allReservations
-                  .filter(res => res.property_name === property.id) // Filter reservations for this property
-                  .map((reservation) => {
-                    const checkIn = parseISO(reservation.check_in_date);
-                    const checkOut = parseISO(reservation.check_out_date);
-                    const lastNight = addDays(checkOut, -1);
+                  {/* Day Cells (Background Grid) */}
+                  {daysInMonth.map((day, dayIndex) => (
+                    <div
+                      key={`${property.id}-${format(day, 'yyyy-MM-dd')}-bg`}
+                      className={`grid-cell border-b border-r ${isSameDay(day, new Date()) ? 'bg-blue-50 dark:bg-blue-950' : 'bg-gray-50 dark:bg-gray-800'}`}
+                      style={{ width: `${dayCellWidth}px` }}
+                    ></div>
+                  ))}
 
-                    const monthStart = startOfMonth(currentMonth);
-                    const monthEnd = endOfMonth(currentMonth);
+                  {/* Reservation Bars (Overlay) */}
+                  {reservationsForThisProperty
+                    .map((reservation) => {
+                      const checkIn = parseISO(reservation.check_in_date);
+                      const checkOut = parseISO(reservation.check_out_date);
+                      const lastNight = addDays(checkOut, -1);
 
-                    // Determine if the reservation overlaps with the current month
-                    const overlapsWithMonth = 
-                      (checkIn <= monthEnd && lastNight >= monthStart);
+                      const monthStart = startOfMonth(currentMonth);
+                      const monthEnd = endOfMonth(currentMonth);
 
-                    if (!overlapsWithMonth) {
-                      return null; // Reservation is completely outside the current month
-                    }
+                      // Determine if the reservation overlaps with the current month
+                      const overlapsWithMonth = 
+                        (checkIn <= monthEnd && lastNight >= monthStart);
 
-                    // Calculate the actual start and end day within the current month's visible range
-                    const effectiveStartDay = checkIn < monthStart ? monthStart : checkIn;
-                    const effectiveEndDay = lastNight > monthEnd ? monthEnd : lastNight;
+                      if (!overlapsWithMonth) {
+                        return null; // Reservation is completely outside the current month
+                      }
 
-                    // Calculate column start and span based on daysInMonth array
-                    const startColIndex = daysInMonth.findIndex(d => isSameDay(d, effectiveStartDay));
-                    const endColIndex = daysInMonth.findIndex(d => isSameDay(d, effectiveEndDay));
+                      // Calculate the actual start and end day within the current month's visible range
+                      const effectiveStartDay = checkIn < monthStart ? monthStart : checkIn;
+                      const effectiveEndDay = lastNight > monthEnd ? monthEnd : lastNight;
 
-                    if (startColIndex === -1 || endColIndex === -1) {
-                      console.warn(`Could not find start/end day in current month for reservation ${reservation.id}.`);
-                      return null;
-                    }
+                      // Calculate column start and span based on daysInMonth array
+                      const startColIndex = daysInMonth.findIndex(d => isSameDay(d, effectiveStartDay));
+                      const endColIndex = daysInMonth.findIndex(d => isSameDay(d, effectiveEndDay));
 
-                    const colSpan = endColIndex - startColIndex + 1;
-                    const gridColumnStart = startColIndex + 1; // CSS grid columns are 1-indexed
+                      if (startColIndex === -1 || endColIndex === -1) {
+                        console.warn(`DEBUG: Could not find start/end day in current month for reservation ${reservation.id}. Effective range: ${format(effectiveStartDay, 'yyyy-MM-dd')} to ${format(effectiveEndDay, 'yyyy-MM-dd')}`);
+                        return null;
+                      }
 
-                    let backgroundColor = 'bg-blue-500'; // Default color
-                    let textColor = 'text-white';
-                    let barBorderRadius = '';
+                      const colSpan = endColIndex - startColIndex + 1;
+                      const gridColumnStart = startColIndex + 1; // CSS grid columns are 1-indexed
 
-                    switch (reservation.status) {
-                      case 'CONFIRMED':
-                        backgroundColor = 'bg-green-500';
-                        break;
-                      case 'PENDING':
-                        backgroundColor = 'bg-yellow-500';
-                        break;
-                      case 'CANCELLED':
-                        backgroundColor = 'bg-red-500';
-                        break;
-                      default:
-                        backgroundColor = 'bg-gray-500';
-                    }
+                      let backgroundColor = 'bg-blue-500'; // Default color
+                      let textColor = 'text-white';
+                      let barBorderRadius = '';
 
-                    // Determine if the bar should have rounded corners on the left/right
-                    if (isSameDay(effectiveStartDay, checkIn)) {
-                      barBorderRadius += 'rounded-l-md ';
-                    }
-                    if (isSameDay(effectiveEndDay, lastNight)) {
-                      barBorderRadius += 'rounded-r-md ';
-                    }
-                    if (isSameDay(effectiveStartDay, checkIn) && isSameDay(effectiveEndDay, lastNight)) {
-                      barBorderRadius = 'rounded-md'; // Single day or fully contained within month
-                    }
+                      switch (reservation.status) {
+                        case 'CONFIRMED':
+                          backgroundColor = 'bg-green-500';
+                          break;
+                        case 'PENDING':
+                          backgroundColor = 'bg-yellow-500';
+                          break;
+                        case 'CANCELLED':
+                          backgroundColor = 'bg-red-500';
+                          break;
+                        default:
+                          backgroundColor = 'bg-gray-500';
+                      }
 
-                    return (
-                      <div
-                        key={reservation.id}
-                        className={`absolute h-8 flex items-center justify-center text-xs font-semibold overflow-hidden whitespace-nowrap px-1 ${backgroundColor} ${textColor} ${barBorderRadius} shadow-sm cursor-pointer hover:opacity-90 transition-opacity`}
-                        style={{
-                          gridColumn: `${gridColumnStart} / span ${colSpan}`,
-                          marginTop: '2px', // Small offset to sit on top of grid cell
-                          marginBottom: '2px',
-                          zIndex: 10,
-                          left: `${(gridColumnStart - 1) * dayCellWidth}px`, // Position based on column index
-                          width: `${colSpan * dayCellWidth}px`, // Width based on span
-                        }}
-                        title={`${reservation.guest_name} (${reservation.status}) - Du ${format(checkIn, 'dd/MM', { locale: fr })} au ${format(checkOut, 'dd/MM', { locale: fr })}`}
-                      >
-                        {reservation.guest_name}
-                      </div>
-                    );
-                  })}
-              </React.Fragment>
-            ))}
+                      // Determine if the bar should have rounded corners on the left/right
+                      if (isSameDay(effectiveStartDay, checkIn)) {
+                        barBorderRadius += 'rounded-l-md ';
+                      }
+                      if (isSameDay(effectiveEndDay, lastNight)) {
+                        barBorderRadius += 'rounded-r-md ';
+                      }
+                      if (isSameDay(effectiveStartDay, checkIn) && isSameDay(effectiveEndDay, lastNight)) {
+                        barBorderRadius = 'rounded-md'; // Single day or fully contained within month
+                      }
+
+                      console.log(`DEBUG: Drawing reservation ${reservation.id} for property ${reservation.property_name}. Dates: ${format(checkIn, 'yyyy-MM-dd')} to ${format(checkOut, 'yyyy-MM-dd')}. Effective: ${format(effectiveStartDay, 'yyyy-MM-dd')} to ${format(effectiveEndDay, 'yyyy-MM-dd')}. Grid: col ${gridColumnStart} / span ${colSpan}`);
+
+                      return (
+                        <div
+                          key={reservation.id}
+                          className={`absolute h-8 flex items-center justify-center text-xs font-semibold overflow-hidden whitespace-nowrap px-1 ${backgroundColor} ${textColor} ${barBorderRadius} shadow-sm cursor-pointer hover:opacity-90 transition-opacity`}
+                          style={{
+                            gridColumn: `${gridColumnStart} / span ${colSpan}`,
+                            marginTop: '2px', // Small offset to sit on top of grid cell
+                            marginBottom: '2px',
+                            zIndex: 10,
+                            left: `${(gridColumnStart - 1) * dayCellWidth}px`, // Position based on column index
+                            width: `${colSpan * dayCellWidth}px`, // Width based on span
+                          }}
+                          title={`${reservation.guest_name} (${reservation.status}) - Du ${format(checkIn, 'dd/MM', { locale: fr })} au ${format(checkOut, 'dd/MM', { locale: fr })}`}
+                        >
+                          {reservation.guest_name}
+                        </div>
+                      );
+                    })}
+                </React.Fragment>
+              );
+            })}
           </div>
         )}
       </CardContent>
