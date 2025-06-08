@@ -40,13 +40,12 @@ const BookingPlanningGrid: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const fetchedReservationsPromises = properties.map(property => 
-          fetchKrossbookingReservations(property.id)
-        );
-        const results = await Promise.all(fetchedReservationsPromises);
-        const combinedReservations = results.flat(); // Flatten the array of arrays
-        setAllReservations(combinedReservations);
-        console.log("DEBUG: All fetched reservations (combined):", combinedReservations); 
+        // Fetch all reservations without filtering by room ID in the proxy
+        // We pass a dummy roomId as it's no longer used for filtering in the proxy,
+        // but the function signature expects it.
+        const fetchedReservations = await fetchKrossbookingReservations('dummy'); 
+        setAllReservations(fetchedReservations);
+        console.log("DEBUG: All fetched reservations (combined, before client-side filtering):", fetchedReservations); 
       } catch (err: any) {
         setError(`Erreur générale lors du chargement des réservations : ${err.message}`);
         console.error("DEBUG: Error in loadAllReservations:", err);
@@ -137,7 +136,7 @@ const BookingPlanningGrid: React.FC = () => {
               const reservationsForThisProperty = allReservations.filter(res => {
                 const isMatch = res.property_name === property.id;
                 if (!isMatch) {
-                  console.log(`DEBUG: Mismatch - Reservation ID: ${res.id}, Expected property_name: ${property.id}, Actual property_name: ${res.property_name}`);
+                  // console.log(`DEBUG: Mismatch - Reservation ID: ${res.id}, Expected property_name: ${property.id}, Actual property_name: ${res.property_name}`);
                 }
                 return isMatch;
               });
@@ -164,8 +163,10 @@ const BookingPlanningGrid: React.FC = () => {
                   {reservationsForThisProperty
                     .map((reservation) => {
                       const checkIn = parseISO(reservation.check_in_date);
-                      const checkOut = parseISO(reservation.check_out_date);
-                      const lastNight = addDays(checkOut, -1);
+                      // Krossbooking check_out_date is the day *after* the last night.
+                      // For planning, we want to show the reservation *up to and including* the last night.
+                      // So, the effective last night is check_out_date - 1 day.
+                      const lastNight = addDays(parseISO(reservation.check_out_date), -1);
 
                       const monthStart = startOfMonth(currentMonth);
                       const monthEnd = endOfMonth(currentMonth);
@@ -183,16 +184,16 @@ const BookingPlanningGrid: React.FC = () => {
                       const effectiveEndDay = lastNight > monthEnd ? monthEnd : lastNight;
 
                       // Calculate column start and span based on daysInMonth array
-                      const startColIndex = daysInMonth.findIndex(d => isSameDay(d, effectiveStartDay));
-                      const endColIndex = daysInMonth.findIndex(d => isSameDay(d, effectiveEndDay));
+                      const startColIndex = daysInInterval({ start: monthStart, end: effectiveStartDay }).length - 1;
+                      const endColIndex = daysInInterval({ start: monthStart, end: effectiveEndDay }).length - 1;
 
-                      if (startColIndex === -1 || endColIndex === -1) {
-                        console.warn(`DEBUG: Could not find start/end day in current month for reservation ${reservation.id}. Effective range: ${format(effectiveStartDay, 'yyyy-MM-dd')} to ${format(effectiveEndDay, 'yyyy-MM-dd')}`);
+                      if (startColIndex === -1 || endColIndex === -1 || startColIndex > endColIndex) {
+                        console.warn(`DEBUG: Could not find valid start/end day in current month for reservation ${reservation.id}. Effective range: ${format(effectiveStartDay, 'yyyy-MM-dd')} to ${format(effectiveEndDay, 'yyyy-MM-dd')}. Start Index: ${startColIndex}, End Index: ${endColIndex}`);
                         return null;
                       }
 
                       const colSpan = endColIndex - startColIndex + 1;
-                      const gridColumnStart = startColIndex + 1; // CSS grid columns are 1-indexed
+                      const gridColumnStart = startColIndex + 1; // CSS grid columns are 1-indexed, plus 1 for the property name column
 
                       let backgroundColor = 'bg-blue-500'; // Default color
                       let textColor = 'text-white';
@@ -213,31 +214,36 @@ const BookingPlanningGrid: React.FC = () => {
                       }
 
                       // Determine if the bar should have rounded corners on the left/right
+                      // Only round if the effective start/end is the actual reservation start/end
                       if (isSameDay(effectiveStartDay, checkIn)) {
                         barBorderRadius += 'rounded-l-md ';
                       }
                       if (isSameDay(effectiveEndDay, lastNight)) {
                         barBorderRadius += 'rounded-r-md ';
                       }
-                      if (isSameDay(effectiveStartDay, checkIn) && isSameDay(effectiveEndDay, lastNight)) {
-                        barBorderRadius = 'rounded-md'; // Single day or fully contained within month
+                      // If it's a single day reservation or fully contained within the month and not spanning
+                      if (isSameDay(effectiveStartDay, checkIn) && isSameDay(effectiveEndDay, lastNight) && colSpan === 1) {
+                        barBorderRadius = 'rounded-md'; 
+                      } else if (isSameDay(effectiveStartDay, checkIn) && isSameDay(effectiveEndDay, lastNight) && colSpan > 1) {
+                        barBorderRadius = 'rounded-md';
                       }
 
-                      console.log(`DEBUG: Drawing reservation ${reservation.id} for property ${reservation.property_name}. Dates: ${format(checkIn, 'yyyy-MM-dd')} to ${format(checkOut, 'yyyy-MM-dd')}. Effective: ${format(effectiveStartDay, 'yyyy-MM-dd')} to ${format(effectiveEndDay, 'yyyy-MM-dd')}. Grid: col ${gridColumnStart} / span ${colSpan}`);
+
+                      console.log(`DEBUG: Drawing reservation ${reservation.id} for property ${reservation.property_name}. Dates: ${format(checkIn, 'yyyy-MM-dd')} to ${format(lastNight, 'yyyy-MM-dd')} (last night). Effective: ${format(effectiveStartDay, 'yyyy-MM-dd')} to ${format(effectiveEndDay, 'yyyy-MM-dd')}. Grid: col ${gridColumnStart} / span ${colSpan}`);
 
                       return (
                         <div
                           key={reservation.id}
                           className={`absolute h-8 flex items-center justify-center text-xs font-semibold overflow-hidden whitespace-nowrap px-1 ${backgroundColor} ${textColor} ${barBorderRadius} shadow-sm cursor-pointer hover:opacity-90 transition-opacity`}
                           style={{
-                            gridColumn: `${gridColumnStart} / span ${colSpan}`,
-                            marginTop: '2px', // Small offset to sit on top of grid cell
-                            marginBottom: '2px',
-                            zIndex: 10,
-                            left: `${(gridColumnStart - 1) * dayCellWidth}px`, // Position based on column index
+                            // gridColumn: `${gridColumnStart} / span ${colSpan}`, // This is for grid-template-columns, not absolute positioning
+                            gridRow: 'auto', // This ensures it's within the current property's row
+                            top: `${(properties.findIndex(p => p.id === property.id) + 2) * 40 + 2}px`, // +2 for header rows, +2px for margin-top
+                            left: `${150 + startColIndex * dayCellWidth}px`, // 150px for property name column, then start at correct day
                             width: `${colSpan * dayCellWidth}px`, // Width based on span
+                            height: '36px', // Slightly less than row height for visual spacing
                           }}
-                          title={`${reservation.guest_name} (${reservation.status}) - Du ${format(checkIn, 'dd/MM', { locale: fr })} au ${format(checkOut, 'dd/MM', { locale: fr })}`}
+                          title={`${reservation.guest_name} (${reservation.status}) - Du ${format(checkIn, 'dd/MM', { locale: fr })} au ${format(lastNight, 'dd/MM', { locale: fr })}`}
                         >
                           {reservation.guest_name}
                         </div>
