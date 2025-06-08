@@ -142,16 +142,16 @@ const CalendarPage: React.FC = () => {
               <h2 className="text-xl font-semibold mb-3">Légende du calendrier</h2>
               <div className="flex flex-wrap gap-4 mt-2">
                 <div className="flex items-center">
-                  <span className="w-4 h-4 rounded-full bg-green-500 mr-2"></span>
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Arrivée</span>
+                  <span className="w-4 h-4 mr-2" style={{ borderLeft: '3px solid hsl(var(--calendar-arrival-border))' }}></span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Arrivée (bordure verte)</span>
                 </div>
                 <div className="flex items-center">
-                  <span className="w-4 h-4 rounded-full bg-red-500 mr-2"></span>
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Départ</span>
+                  <span className="w-4 h-4 mr-2" style={{ borderRight: '3px solid hsl(var(--calendar-departure-border))' }}></span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Départ (bordure rouge)</span>
                 </div>
                 <div className="flex items-center">
-                  <span className="w-4 h-4 rounded-full bg-blue-500 mr-2"></span>
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Nuit réservée</span>
+                  <span className="w-4 h-4 rounded-full mr-2" style={{ backgroundColor: 'hsl(var(--calendar-reserved-bg))' }}></span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Nuit réservée (fond coloré)</span>
                 </div>
               </div>
             </div>
