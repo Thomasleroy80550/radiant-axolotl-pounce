@@ -133,7 +133,6 @@ serve(async (req) => {
       if (!roomId) {
         throw new Error("Missing 'room_id' parameter for 'get_reservations' action.");
       }
-      // Updated the path to /reservations/get-list as per documentation
       krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
       krossbookingBody = JSON.stringify({ room_id: roomId }); // Send room_id in body for POST
     } else {
@@ -162,7 +161,7 @@ serve(async (req) => {
     // --- END NEW ERROR HANDLING ---
 
     const data = await response.json();
-    console.log("Krossbooking API response:", data);
+    console.log("Krossbooking API response (full data):", data); // Log the full response
 
     return new Response(JSON.stringify(data), {
       status: response.status,
