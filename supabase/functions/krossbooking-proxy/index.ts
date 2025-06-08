@@ -10,13 +10,13 @@ const corsHeaders = {
 // Function to get the authentication token from Krossbooking
 async function getAuthToken(): Promise<string> {
   const KROSSBOOKING_API_KEY = Deno.env.get('KROSSBOOKING_API_KEY');
-  const KROSSBOOKING_HOTEL_ID = Deno.env.get('KROSSBOOKING_HOTEL_ID'); // Corrected typo here
+  const KROSSBOOKING_HOTEL_ID = Deno.env.get('KROSSBOOKING_HOTEL_ID');
   const KROSSBOOKING_USERNAME = Deno.env.get('KROSSBOOKING_USERNAME');
   const KROSSBOOKING_PASSWORD = Deno.env.get('KROSSBOOKING_PASSWORD');
 
   console.log("--- Krossbooking Auth Attempt ---");
   console.log(`API Key (first 5 chars): ${KROSSBOOKING_API_KEY ? KROSSBOOKING_API_KEY.substring(0, 5) + '...' : 'NOT SET'}`);
-  console.log(`Hotel ID: ${KROSSBOOKING_HOTEL_ID || 'NOT SET'}`); // Corrected typo here
+  console.log(`Hotel ID: ${KROSSBOOKING_HOTEL_ID || 'NOT SET'}`);
   console.log(`Username: ${KROSSBOOKING_USERNAME || 'NOT SET'}`);
   console.log(`Password (first 5 chars): ${KROSSBOOKING_PASSWORD ? KROSSBOOKING_PASSWORD.substring(0, 5) + '...' : 'NOT SET'}`);
 
@@ -131,7 +131,8 @@ serve(async (req) => {
       if (!roomId) {
         throw new Error("Missing 'room_id' parameter for 'get_reservations' action.");
       }
-      krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations?room_id=${roomId}`;
+      // Corrected URL path: assuming room_id should be part of the path
+      krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/rooms/${roomId}/reservations`;
     } else {
       throw new Error(`Unsupported action: ${action}`);
     }
