@@ -78,9 +78,54 @@ serve(async (req) => {
     const authToken = await getAuthToken();
     console.log("Successfully obtained Krossbooking auth token.");
 
-    // Parse the request body for POST requests
-    const { action, room_id: roomId } = await req.json(); // Destructure action and roomId from body
-    console.log(`Received action: ${action}, room_id: ${roomId}`); // Log received parameters
+    let action: string | undefined;
+    let roomId: string | undefined;
+
+    // Log Content-Length header for debugging
+    const contentLength = req.headers.get('content-length');
+    console.log(`Received Content-Length: ${contentLength}`);
+
+    // Only attempt to parse JSON body for POST requests with application/json content type
+    if (req.method === 'POST') {
+      const contentType = req.headers.get('content-type');
+      console.log(`Received Content-Type for POST: ${contentType}`); // More specific log
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          const requestBody = await req.json();
+          action = requestBody.action;
+          roomId = requestBody.room_id;
+        } catch (jsonParseError) {
+          console.error("Error parsing request body as JSON:", jsonParseError);
+          return new Response(JSON.stringify({ error: "Invalid JSON in request body." }), {
+            status: 400, // Bad Request
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          });
+        }
+      } else {
+        console.error(`Received POST request with unexpected Content-Type: ${contentType}`);
+        return new Response(JSON.stringify({ error: "Expected 'application/json' for POST requests." }), {
+          status: 400, // Bad Request
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        });
+      }
+    } else {
+      console.warn(`Received unsupported HTTP method: ${req.method}`);
+      return new Response(JSON.stringify({ error: `Unsupported HTTP method: ${req.method}` }), {
+        status: 405, // Method Not Allowed
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
+      });
+    }
+
+    console.log(`Received action: ${action}, room_id: ${roomId}`);
 
     let krossbookingUrl = '';
 
@@ -88,7 +133,6 @@ serve(async (req) => {
       if (!roomId) {
         throw new Error("Missing 'room_id' parameter for 'get_reservations' action.");
       }
-      // Construct the URL with the specific endpoint for reservations
       krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations?room_id=${roomId}`;
     } else {
       throw new Error(`Unsupported action: ${action}`);
