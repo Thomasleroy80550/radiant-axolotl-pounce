@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface KrossbookingReservation {
   id: string;
   guest_name: string;
-  property_name: string;
+  property_name: string; // This will now be the property ID from Krossbooking
   check_in_date: string;
   check_out_date: string;
   status: string;
@@ -65,18 +65,19 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
 
     const krossbookingResponse = JSON.parse(responseText);
 
-    if (krossbookingResponse && krossbookingResponse.success && Array.isArray(krossbookingResponse.reservations)) {
-      return krossbookingResponse.reservations.map((res: any) => ({
-        id: res.id,
-        guest_name: res.guest_name,
-        property_name: res.property_name,
-        check_in_date: res.check_in_date,
-        check_out_date: res.check_out_date,
-        status: res.status,
-        amount: res.amount,
+    // Check if krossbookingResponse.data exists and is an array
+    if (krossbookingResponse && Array.isArray(krossbookingResponse.data)) {
+      return krossbookingResponse.data.map((res: any) => ({
+        id: res.id_reservation.toString(), // Map id_reservation to id
+        guest_name: res.label || 'N/A', // Map label to guest_name
+        property_name: res.id_property.toString(), // Map id_property to property_name
+        check_in_date: res.arrival, // Map arrival to check_in_date
+        check_out_date: res.departure, // Map departure to check_out_date
+        status: res.cod_reservation_status, // Map cod_reservation_status to status
+        amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€', // Map charge_total_amount to amount
       }));
     } else {
-      console.warn("Unexpected Krossbooking API response structure:", krossbookingResponse);
+      console.warn("Unexpected Krossbooking API response structure or no data array:", krossbookingResponse);
       return [];
     }
   } catch (error: any) {

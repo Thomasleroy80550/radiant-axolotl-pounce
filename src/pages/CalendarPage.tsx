@@ -23,9 +23,9 @@ const CalendarPage: React.FC = () => {
   const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // IMPORTANT: Replace 'YOUR_KROSSBOOKING_ROOM_ID' with the actual ID of your property/room from Krossbooking.
-  // You can find this ID in your Krossbooking account or documentation.
-  const KROSSBOOKING_ROOM_ID = '62'; // Placeholder ID, please change this!
+  // IMPORTANT: Changed KROSSBOOKING_ROOM_ID to '1' based on the API response log.
+  // Please verify this ID in your Krossbooking account.
+  const KROSSBOOKING_ROOM_ID = '1'; 
 
   React.useEffect(() => {
     const loadReservations = async () => {
@@ -82,7 +82,7 @@ const CalendarPage: React.FC = () => {
                   {reservations.map((res) => (
                     <li key={res.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
                       <p className="font-medium">
-                        {res.guest_name} - {res.property_name}
+                        {res.guest_name} - Propriété ID: {res.property_name}
                       </p>
                       <p className="text-sm text-gray-500">
                         Du {new Date(res.check_in_date).toLocaleDateString('fr-FR')} au {new Date(res.check_out_date).toLocaleDateString('fr-FR')}
