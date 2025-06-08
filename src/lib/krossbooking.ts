@@ -11,6 +11,9 @@ interface KrossbookingReservation {
   // Add other fields as per Krossbooking API response
 }
 
+// Define the base URL for your Supabase Edge Function
+const KROSSBOOKING_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/krossbooking-proxy";
+
 /**
  * Fetches reservations from Krossbooking API via the Supabase Edge Function proxy.
  * @param roomId The ID of the room/property to fetch reservations for.
@@ -18,29 +21,38 @@ interface KrossbookingReservation {
  */
 export async function fetchKrossbookingReservations(roomId: string): Promise<KrossbookingReservation[]> {
   try {
-    // Pass parameters in the body for POST request to the Edge Function
-    // Supabase functions.invoke automatically stringifies the body if it's an object
-    const { data, error } = await supabase.functions.invoke('krossbooking-proxy', {
+    console.log(`Attempting to fetch Krossbooking reservations for room ID: ${roomId}`);
+
+    const response = await fetch(KROSSBOOKING_PROXY_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        // No need for Authorization header here unless the Edge Function itself requires client-side auth
       },
-      body: { // Pass the object directly, invoke will stringify it
+      body: JSON.stringify({ // Manually stringify the body for a direct fetch call
         action: 'get_reservations',
         room_id: roomId,
-      },
+      }),
     });
 
-    if (error) {
-      console.error("Error invoking krossbooking-proxy:", error);
-      throw new Error(`Failed to fetch reservations: ${error.message}`);
+    console.log(`Response status from Edge Function: ${response.status}`);
+    const responseText = await response.text(); // Read as text first to handle potential non-JSON errors
+    console.log(`Raw response from Edge Function: ${responseText}`);
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = JSON.parse(responseText);
+      } catch (e) {
+        errorData = responseText; // If not JSON, use raw text
+      }
+      console.error("Error from Edge Function:", errorData);
+      throw new Error(`Failed to fetch reservations: Edge Function returned a non-2xx status code. Details: ${JSON.stringify(errorData)}`);
     }
 
-    // Assuming the Edge Function returns the Krossbooking API response directly
-    // You might need to adjust this based on the actual structure of the Krossbooking API response
-    const krossbookingResponse = data;
+    const krossbookingResponse = JSON.parse(responseText); // Parse the response as JSON
 
-    // Example of expected Krossbooking response structure (adjust as needed)
+    // Assuming the Edge Function returns the Krossbooking API response directly
     if (krossbookingResponse && krossbookingResponse.success && Array.isArray(krossbookingResponse.reservations)) {
       return krossbookingResponse.reservations.map((res: any) => ({
         id: res.id,
