@@ -80,8 +80,7 @@ serve(async (req) => {
     console.log("Successfully obtained Krossbooking auth token.");
 
     let action: string | undefined;
-    // requestedRoomId is no longer used for filtering in the Edge Function
-    // let requestedRoomId: string | undefined; 
+    let requestedRoomId: string | undefined; // Décommenté et utilisé
 
     const contentLength = req.headers.get('content-length');
     console.log(`Received Content-Length: ${contentLength}`);
@@ -93,7 +92,7 @@ serve(async (req) => {
         try {
           const requestBody = await req.json();
           action = requestBody.action;
-          // requestedRoomId = requestBody.id_room; // No longer used for filtering here
+          requestedRoomId = requestBody.id_room; // Récupère l'id_room du corps de la requête
         } catch (jsonParseError) {
           console.error("Error parsing request body as JSON:", jsonParseError);
           return new Response(JSON.stringify({ error: "Invalid JSON in request body." }), {
@@ -125,17 +124,19 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Received action: ${action}`); 
+    console.log(`Received action: ${action}, requestedRoomId: ${requestedRoomId}`); 
 
     let krossbookingUrl = '';
     let krossbookingMethod = 'POST'; 
     let krossbookingBody: string | undefined;
 
     if (action === 'get_reservations') {
-      // Always fetch all reservations with rooms data
       const payload: any = {
         with_rooms: true, 
       };
+      if (requestedRoomId) { // Ajoute l'id_room au payload si présent
+        payload.id_room = requestedRoomId; 
+      }
       krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
       krossbookingBody = JSON.stringify(payload);
     } else {
@@ -162,7 +163,7 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log("Krossbooking API response (full data, no filtering applied in Edge Function):", data); 
+    console.log("Krossbooking API response (full data, now filtered by Edge Function):", data); 
 
     // Return all data received from Krossbooking API
     return new Response(JSON.stringify({ data: data.data || [], total_count: data.total_count, count: data.count, limit: data.limit, offset: data.offset }), {
