@@ -25,7 +25,7 @@ const CalendarPage: React.FC = () => {
 
   // IMPORTANT: Replace 'YOUR_KROSSBOOKING_ROOM_ID' with the actual ID of your property/room from Krossbooking.
   // You can find this ID in your Krossbooking account or documentation.
-  const KROSSBOOKING_ROOM_ID = '1'; // Placeholder ID, please change this!
+  const KROSSBOOKING_ROOM_ID = '62'; // Placeholder ID, please change this!
 
   React.useEffect(() => {
     const loadReservations = async () => {
