@@ -1,0 +1,154 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Bell, ChevronDown, Search, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, FileText, LifeBuoy, Puzzle, Map, User } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+
+interface MainLayoutProps {
+  children: React.ReactNode;
+}
+
+const navigationItems = [
+  { name: 'Aperçu', href: '/', icon: Home },
+  { name: 'Calendrier', href: '/calendar', icon: CalendarDays },
+  { name: 'Réservations', href: '/bookings', icon: Bookmark },
+  { name: 'Performances', href: '/performance', icon: TrendingUp },
+  { name: 'Mes Avis', href: '/reviews', icon: MessageSquare },
+  { name: 'Comptabilité', href: '/accounting', icon: Banknote },
+  { name: 'Bilans', href: '/balances', icon: FileText },
+  { name: 'Rapports', href: '/reports', icon: FileText },
+  { name: 'Aides', href: '/help', icon: LifeBuoy },
+];
+
+const bottomNavigationItems = [
+  { name: 'Modules', href: '/modules', icon: Puzzle },
+  { name: 'Road Map', href: '/roadmap', icon: Map },
+  { name: 'Paramètres', href: '/settings', icon: Settings },
+];
+
+const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+  return (
+    <div className="flex min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-50">
+      {/* Sidebar */}
+      <aside className="w-64 bg-sidebar text-sidebar-foreground p-4 flex flex-col border-r border-sidebar-border shadow-lg">
+        <div className="flex items-center mb-8">
+          <img src="/logo.svg" alt="Hello Keys Logo" className="h-8 w-auto mr-2" />
+          <span className="text-lg font-bold text-sidebar-primary">HELLO KEYS</span>
+          <span className="text-xs ml-1 text-sidebar-foreground">GESTION LOCATIVE 2.0</span>
+        </div>
+
+        <div className="mb-6">
+          <Button variant="secondary" className="w-full justify-start mb-2 bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80">Gestion</Button>
+          <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">Découvrir</Button>
+        </div>
+
+        <nav className="flex-grow">
+          <ul className="space-y-2">
+            {navigationItems.map((item) => (
+              <li key={item.name}>
+                <Link
+                  to={item.href}
+                  className={cn(
+                    "flex items-center p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors",
+                    item.href === '/' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : '' // Active state for Dashboard
+                  )}
+                >
+                  <item.icon className="h-5 w-5 mr-3" />
+                  {item.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <nav className="mt-auto pt-4 border-t border-sidebar-border">
+          <ul className="space-y-2">
+            {bottomNavigationItems.map((item) => (
+              <li key={item.name}>
+                <Link
+                  to={item.href}
+                  className="flex items-center p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                >
+                  <item.icon className="h-5 w-5 mr-3" />
+                  {item.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </aside>
+
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <header className="bg-white dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shadow-sm">
+          <div className="flex items-center space-x-4">
+            <span className="text-lg font-semibold">0°C</span> {/* Placeholder for temperature */}
+            {/* Search bar - not in screenshot but common for dashboards */}
+            {/* <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Input placeholder="Rechercher..." className="pl-9" />
+            </div> */}
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <Button variant="outline" className="flex items-center space-x-2">
+              <span className="text-blue-600 dark:text-blue-400">+</span>
+              <span>Actions rapides</span>
+            </Button>
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="h-5 w-5" />
+              <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500" /> {/* Notification indicator */}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full flex items-center space-x-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src="/avatars/01.png" alt="Thomas" />
+                    <AvatarFallback>TH</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col items-start">
+                    <span className="text-sm font-medium">Thomas</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Compte admin</span>
+                  </div>
+                  <ChevronDown className="h-4 w-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">Thomas</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      m@example.com
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </header>
+
+        {/* Main content area for pages */}
+        <main className="flex-1 p-6 overflow-auto">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default MainLayout;
