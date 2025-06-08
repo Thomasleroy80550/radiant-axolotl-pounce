@@ -8,7 +8,9 @@ interface KrossbookingReservation {
   check_out_date: string;
   status: string;
   amount: string;
-  channel_id?: string; // Added to store the OTA channel ID
+  cod_channel?: string; // Nouveau champ pour le code du canal (ex: 'AIRBNB', 'BOOKING')
+  ota_id?: string;      // Nouveau champ pour l'ID de référence du canal
+  channel_identifier?: string; // Utilisé pour la logique de couleur dans le calendrier
 }
 
 // Define the base URL for your Supabase Edge Function
@@ -72,8 +74,6 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
         const associatedRoom = res.rooms?.find((room: any) => room.id_room?.toString() === roomId);
         
         const propertyId = associatedRoom?.id_room?.toString() || '';
-        // Default to 'DIRECT' if no channel is found or if the room doesn't match the requested ID
-        const channelId = associatedRoom?.id_channel?.toString() || 'DIRECT'; 
         
         return {
           id: res.id_reservation.toString(), 
@@ -83,7 +83,9 @@ export async function fetchKrossbookingReservations(roomId: string): Promise<Kro
           check_out_date: res.departure, 
           status: res.cod_reservation_status, 
           amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€', 
-          channel_id: channelId, // Add the channel ID
+          cod_channel: res.cod_channel, // Récupère cod_channel
+          ota_id: res.ota_id,           // Récupère ota_id
+          channel_identifier: res.cod_channel || 'UNKNOWN', // Utilise cod_channel pour l'identifiant de couleur
         };
       });
     } else {

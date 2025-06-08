@@ -16,18 +16,20 @@ interface KrossbookingReservation {
   check_out_date: string;
   status: string;
   amount: string;
-  channel_id?: string; // Added to store the OTA channel ID
+  cod_channel?: string; // Nouveau champ pour le code du canal (ex: 'AIRBNB', 'BOOKING')
+  ota_id?: string;      // Nouveau champ pour l'ID de référence du canal
+  channel_identifier?: string; // Utilisé pour la logique de couleur dans le calendrier
 }
 
 // Définir l'ID et le nom de la chambre par défaut à afficher
-const defaultRoomId = '62'; // Remplacez par l'ID de la chambre Krossbooking que vous souhaitez afficher
+const defaultRoomId = '36'; // Remplacez par l'ID de la chambre Krossbooking que vous souhaitez afficher
 const defaultRoomName = 'Ma Chambre par défaut (2c)'; // Nom affiché pour cette chambre
 
-// Mapping des IDs de canal Krossbooking vers des noms et couleurs
+// Mapping des codes de canal Krossbooking vers des noms et couleurs Tailwind CSS
 const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
-  '1': { name: 'Airbnb', bgColor: 'bg-red-600', textColor: 'text-white' },
-  '2': { name: 'Booking.com', bgColor: 'bg-blue-700', textColor: 'text-white' },
-  '4': { name: 'Abritel', bgColor: 'bg-orange-600', textColor: 'text-white' },
+  'AIRBNB': { name: 'Airbnb', bgColor: 'bg-red-600', textColor: 'text-white' },
+  'BOOKING': { name: 'Booking.com', bgColor: 'bg-blue-700', textColor: 'text-white' },
+  'ABRITEL': { name: 'Abritel', bgColor: 'bg-orange-600', textColor: 'text-white' },
   'DIRECT': { name: 'Direct', bgColor: 'bg-purple-600', textColor: 'text-white' },
   'UNKNOWN': { name: 'Autre', bgColor: 'bg-gray-600', textColor: 'text-white' },
 };
@@ -177,7 +179,8 @@ const BookingPlanningGrid: React.FC = () => {
 
                   const colSpan = endColIndex - startColIndex + 1;
 
-                  const channelInfo = channelColors[reservation.channel_id || 'UNKNOWN'] || channelColors['UNKNOWN'];
+                  // Utilise channel_identifier pour trouver les informations de couleur
+                  const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
                   let barBorderRadius = '';
 
                   if (isSameDay(effectiveStartDay, checkIn)) {
