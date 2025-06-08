@@ -23,8 +23,8 @@ const CalendarPage: React.FC = () => {
   const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // IMPORTANT: Changed KROSSBOOKING_ROOM_ID to '62' as requested.
-  const KROSSBOOKING_ROOM_ID = '62'; 
+  // IMPORTANT: Changed KROSSBOOKING_ROOM_ID to '36' as requested.
+  const KROSSBOOKING_ROOM_ID = '36'; 
 
   React.useEffect(() => {
     const loadReservations = async () => {
