@@ -16,7 +16,7 @@ async function getAuthToken(): Promise<string> {
 
   console.log("--- Krossbooking Auth Attempt ---");
   console.log(`API Key (first 5 chars): ${KROSSBOOKING_API_KEY ? KROSSBOOKING_API_KEY.substring(0, 5) + '...' : 'NOT SET'}`);
-  console.log(`Hotel ID: ${KROSSBOOKING_HOTEL_ID || 'NOT SET'}`);
+  console.log(`Hotel ID: ${KROSSBOOKBOOKING_HOTEL_ID || 'NOT SET'}`);
   console.log(`Username: ${KROSSBOOKING_USERNAME || 'NOT SET'}`);
   console.log(`Password (first 5 chars): ${KROSSBOOKING_PASSWORD ? KROSSBOOKING_PASSWORD.substring(0, 5) + '...' : 'NOT SET'}`);
 
@@ -81,14 +81,12 @@ serve(async (req) => {
     let action: string | undefined;
     let roomId: string | undefined;
 
-    // Log Content-Length header for debugging
     const contentLength = req.headers.get('content-length');
     console.log(`Received Content-Length: ${contentLength}`);
 
-    // Only attempt to parse JSON body for POST requests with application/json content type
     if (req.method === 'POST') {
       const contentType = req.headers.get('content-type');
-      console.log(`Received Content-Type for POST: ${contentType}`); // More specific log
+      console.log(`Received Content-Type for POST: ${contentType}`);
       if (contentType && contentType.includes('application/json')) {
         try {
           const requestBody = await req.json();
@@ -97,7 +95,7 @@ serve(async (req) => {
         } catch (jsonParseError) {
           console.error("Error parsing request body as JSON:", jsonParseError);
           return new Response(JSON.stringify({ error: "Invalid JSON in request body." }), {
-            status: 400, // Bad Request
+            status: 400,
             headers: {
               'Content-Type': 'application/json',
               ...corsHeaders,
@@ -107,7 +105,7 @@ serve(async (req) => {
       } else {
         console.error(`Received POST request with unexpected Content-Type: ${contentType}`);
         return new Response(JSON.stringify({ error: "Expected 'application/json' for POST requests." }), {
-          status: 400, // Bad Request
+          status: 400,
           headers: {
             'Content-Type': 'application/json',
             ...corsHeaders,
@@ -117,7 +115,7 @@ serve(async (req) => {
     } else {
       console.warn(`Received unsupported HTTP method: ${req.method}`);
       return new Response(JSON.stringify({ error: `Unsupported HTTP method: ${req.method}` }), {
-        status: 405, // Method Not Allowed
+        status: 405,
         headers: {
           'Content-Type': 'application/json',
           ...corsHeaders,
@@ -141,13 +139,22 @@ serve(async (req) => {
     console.log("Calling Krossbooking API with URL:", krossbookingUrl);
 
     const response = await fetch(krossbookingUrl, {
-      method: 'GET', // Krossbooking API expects GET for reservations
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${authToken}`,
         ...corsHeaders,
       },
     });
+
+    // --- NEW ERROR HANDLING FOR KROSSBOOKING API RESPONSE ---
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error(`Krossbooking API returned non-OK status: ${response.status} ${response.statusText}`);
+      console.error("Krossbooking API Error Body:", errorBody);
+      throw new Error(`Krossbooking API error: ${response.status} ${response.statusText} - ${errorBody}`);
+    }
+    // --- END NEW ERROR HANDLING ---
 
     const data = await response.json();
     console.log("Krossbooking API response:", data);
