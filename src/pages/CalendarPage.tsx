@@ -142,12 +142,12 @@ const CalendarPage: React.FC = () => {
               <h2 className="text-xl font-semibold mb-3">Légende du calendrier</h2>
               <div className="flex flex-wrap gap-4 mt-2">
                 <div className="flex items-center">
-                  <span className="w-4 h-4 mr-2 bg-green-500 [mask-image:linear-gradient(to_bottom_right,transparent_48%,black_48%,black_52%,transparent_52%)] [mask-size:100%_100%] [mask-repeat:no-repeat]"></span>
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Arrivée (ligne diagonale verte)</span>
+                  <span className="w-4 h-4 mr-2 rounded-l-md" style={{ backgroundColor: 'hsl(var(--calendar-reserved-bg))', borderLeft: '3px solid hsl(var(--calendar-arrival-indicator))' }}></span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Arrivée (fond coloré avec bordure gauche verte)</span>
                 </div>
                 <div className="flex items-center">
-                  <span className="w-4 h-4 mr-2 bg-red-500 [mask-image:linear-gradient(to_bottom_left,transparent_48%,black_48%,black_52%,transparent_52%)] [mask-size:100%_100%] [mask-repeat:no-repeat]"></span>
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Départ (ligne diagonale rouge)</span>
+                  <span className="w-4 h-4 mr-2 rounded-r-md" style={{ backgroundColor: 'hsl(var(--calendar-reserved-bg))', borderRight: '3px solid hsl(var(--calendar-departure-indicator))' }}></span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Départ (fond coloré avec bordure droite rouge)</span>
                 </div>
                 <div className="flex items-center">
                   <span className="w-4 h-4 rounded-full mr-2" style={{ backgroundColor: 'hsl(var(--calendar-reserved-bg))' }}></span>
