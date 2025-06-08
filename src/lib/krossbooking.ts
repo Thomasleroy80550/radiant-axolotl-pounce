@@ -18,17 +18,15 @@ interface KrossbookingReservation {
  */
 export async function fetchKrossbookingReservations(roomId: string): Promise<KrossbookingReservation[]> {
   try {
-    // Pass query parameters directly to the invoke method's 'query' option
-    // Supabase will append these to the Edge Function's URL
+    // Pass parameters in the body for POST request to the Edge Function
     const { data, error } = await supabase.functions.invoke('krossbooking-proxy', {
-      method: 'GET',
+      method: 'POST', // Changed to POST
       headers: {
         'Content-Type': 'application/json',
       },
-      query: { // Correctly pass query parameters here
-        action: 'get_reservations', // This is an assumption, please verify with Krossbooking API docs
+      body: { // Parameters are now in the body
+        action: 'get_reservations',
         room_id: roomId,
-        // Add any other necessary parameters for the Krossbooking API
       },
     });
 

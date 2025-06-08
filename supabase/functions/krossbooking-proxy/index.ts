@@ -78,9 +78,9 @@ serve(async (req) => {
     const authToken = await getAuthToken();
     console.log("Successfully obtained Krossbooking auth token.");
 
-    const url = new URL(req.url);
-    const action = url.searchParams.get('action');
-    const roomId = url.searchParams.get('room_id');
+    // Parse the request body for POST requests
+    const { action, room_id: roomId } = await req.json(); // Destructure action and roomId from body
+    console.log(`Received action: ${action}, room_id: ${roomId}`); // Log received parameters
 
     let krossbookingUrl = '';
 
@@ -97,7 +97,7 @@ serve(async (req) => {
     console.log("Calling Krossbooking API with URL:", krossbookingUrl);
 
     const response = await fetch(krossbookingUrl, {
-      method: req.method,
+      method: 'GET', // Krossbooking API expects GET for reservations
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${authToken}`,
