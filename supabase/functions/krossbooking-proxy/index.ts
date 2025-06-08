@@ -80,7 +80,7 @@ serve(async (req) => {
     console.log("Successfully obtained Krossbooking auth token.");
 
     let action: string | undefined;
-    let idRoom: string | undefined; 
+    let requestedRoomId: string | undefined; // Renamed to avoid confusion
 
     const contentLength = req.headers.get('content-length');
     console.log(`Received Content-Length: ${contentLength}`);
@@ -92,7 +92,7 @@ serve(async (req) => {
         try {
           const requestBody = await req.json();
           action = requestBody.action;
-          idRoom = requestBody.id_room; 
+          requestedRoomId = requestBody.id_room; // Store the requested room ID
         } catch (jsonParseError) {
           console.error("Error parsing request body as JSON:", jsonParseError);
           return new Response(JSON.stringify({ error: "Invalid JSON in request body." }), {
@@ -124,19 +124,17 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Received action: ${action}, id_room: ${idRoom}`); 
+    console.log(`Received action: ${action}, requested_room_id: ${requestedRoomId}`); 
 
     let krossbookingUrl = '';
     let krossbookingMethod = 'POST'; 
     let krossbookingBody: string | undefined;
 
     if (action === 'get_reservations') {
+      // Do NOT pass id_room to Krossbooking API directly, fetch all and filter later
       const payload: any = {
-        with_rooms: true, // Add this parameter to retrieve room information
+        with_rooms: true, 
       };
-      if (idRoom) {
-        payload.id_room = parseInt(idRoom); // Ensure id_room is an integer if provided
-      }
       krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
       krossbookingBody = JSON.stringify(payload);
     } else {
@@ -163,9 +161,20 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log("Krossbooking API response (full data):", data); 
+    console.log("Krossbooking API response (full data, before filtering):", data); 
 
-    return new Response(JSON.stringify(data), {
+    let filteredData = data.data || [];
+
+    // Apply filtering by requestedRoomId here in the Edge Function
+    if (requestedRoomId) {
+      filteredData = filteredData.filter((reservation: any) => {
+        // Check if any room in the reservation matches the requestedRoomId
+        return reservation.rooms && reservation.rooms.some((room: any) => room.id_room.toString() === requestedRoomId);
+      });
+      console.log(`Filtered data for room ${requestedRoomId}:`, filteredData);
+    }
+
+    return new Response(JSON.stringify({ data: filteredData, total_count: filteredData.length, count: filteredData.length, limit: data.limit, offset: data.offset }), {
       status: response.status,
       headers: {
         'Content-Type': 'application/json',
