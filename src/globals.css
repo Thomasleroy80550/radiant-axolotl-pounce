@@ -50,11 +50,11 @@
 
     --sidebar-ring: 217.2 91.2% 59.8%;
 
-    /* Custom calendar colors */
-    --calendar-arrival-line: 142.1 76.2% 36.3%; /* Green for arrival line */
-    --calendar-departure-line: 0 84.2% 60.2%; /* Red for departure line */
-    --calendar-reserved-bg: 217.2 91.2% 85%; /* Light blue for middle nights */
-    --calendar-reserved-fg: 222.2 47.4% 11.2%; /* Dark text for light background */
+    /* Custom calendar colors - REMOVED AS NO LONGER USED BY DayPicker */
+    /* --calendar-arrival-line: 142.1 76.2% 36.3%; */
+    /* --calendar-departure-line: 0 84.2% 60.2%; */
+    /* --calendar-reserved-bg: 217.2 91.2% 85%; */
+    /* --calendar-reserved-fg: 222.2 47.4% 11.2%; */
   }
 
   .dark {
@@ -94,11 +94,11 @@
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
 
-    /* Custom calendar colors for dark mode */
-    --calendar-arrival-line: 142.1 76.2% 36.3%; /* Green for arrival line */
-    --calendar-departure-line: 0 62.8% 30.6%; /* Darker red for departure line */
-    --calendar-reserved-bg: 217.2 32.6% 25%; /* Darker blue for middle nights */
-    --calendar-reserved-fg: 210 40% 98%; /* Light text for dark background */
+    /* Custom calendar colors for dark mode - REMOVED AS NO LONGER USED BY DayPicker */
+    /* --calendar-arrival-line: 142.1 76.2% 36.3%; */
+    /* --calendar-departure-line: 0 62.8% 30.6%; */
+    /* --calendar-reserved-bg: 217.2 32.6% 25%; */
+    /* --calendar-reserved-fg: 210 40% 98%; */
   }
 }
 
@@ -112,8 +112,44 @@
   }
 }
 
-/* Custom styles for reserved dates in the calendar */
-.rdp-day_arrival {
+/* Custom styles for the new Booking Planning Grid */
+.grid-container {
+  display: grid;
+  /* grid-template-columns will be set dynamically by JS */
+  grid-auto-rows: 40px; /* Height of each row (property row, day header row) */
+  position: relative; /* For absolute positioning of reservation bars */
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  overflow: hidden; /* Ensures rounded corners and hides overflow */
+}
+
+.grid-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  box-sizing: border-box; /* Include padding in cell's total width/height */
+}
+
+.header-cell {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-size: 0.875rem; /* text-sm */
+  height: 40px; /* Fixed height for header cells */
+}
+
+.property-name-cell {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-size: 0.875rem; /* text-sm */
+  height: 40px; /* Fixed height for property name cells */
+  justify-content: flex-start; /* Align text to start */
+}
+
+/* Specific styles for reservation bars are applied inline via React component */
+
+/* REMOVED DayPicker specific styles */
+/* .rdp-day_arrival {
   background-color: transparent !important;
   color: inherit !important;
   background-image: linear-gradient(to bottom right, transparent 48%, hsl(var(--calendar-arrival-line)) 48%, hsl(var(--calendar-arrival-line)) 52%, transparent 52%) !important;
@@ -123,7 +159,7 @@
 }
 
 .rdp-day_arrival:hover {
-  background-color: hsl(var(--calendar-arrival-line) / 0.1) !important; /* Subtle hover effect */
+  background-color: hsl(var(--calendar-arrival-line) / 0.1) !important;
 }
 
 .rdp-day_departure {
@@ -136,7 +172,7 @@
 }
 
 .rdp-day_departure:hover {
-  background-color: hsl(var(--calendar-departure-line) / 0.1) !important; /* Subtle hover effect */
+  background-color: hsl(var(--calendar-departure-line) / 0.1) !important;
 }
 
 .rdp-day_reserved-middle {
@@ -149,8 +185,7 @@
   background-color: hsl(var(--calendar-reserved-bg) / 0.9) !important;
 }
 
-/* Ensure selected day style doesn't override modifiers */
 .rdp-day_selected:not(.rdp-day_arrival):not(.rdp-day_departure):not(.rdp-day_reserved-middle) {
   background-color: hsl(var(--primary)) !important;
   color: hsl(var(--primary-foreground)) !important;
-}
+} */
