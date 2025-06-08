@@ -25,8 +25,8 @@ interface Property {
 
 // Define your properties here with their actual Krossbooking room IDs
 const properties: Property[] = [
-  { id: '1', name: '2c' },
-  { id: '1', name: 'Plein sud' },
+  { id: '36', name: '2c' },
+  { id: '22', name: 'Plein sud' },
 ];
 
 const BookingPlanningGrid: React.FC = () => {
