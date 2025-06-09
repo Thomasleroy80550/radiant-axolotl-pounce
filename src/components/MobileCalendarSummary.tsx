@@ -4,7 +4,7 @@ import { fr } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Home, LogIn, LogOut, Sparkles, CheckCircle, Clock, XCircle } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } => '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // Correction ici: '=>' remplacé par 'from'
 import { Terminal } from 'lucide-react';
 import { fetchKrossbookingReservations, fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask } from '@/lib/krossbooking';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
