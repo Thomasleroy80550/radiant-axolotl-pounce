@@ -60,13 +60,15 @@ const GoogleSheetDataPage: React.FC = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      {/* Use the first row of data as headers */}
                       {sheetData[0].map((header, index) => (
                         <TableHead key={index}>{header}</TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sheetData.slice(1).map((row, rowIndex) => (
+                    {/* Render all rows, including the first one (which is also used as header) */}
+                    {sheetData.map((row, rowIndex) => (
                       <TableRow key={rowIndex}>
                         {row.map((cell, cellIndex) => (
                           <TableCell key={cellIndex}>{cell}</TableCell>
