@@ -18,6 +18,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label'; // Import Label for dialog content
 
 interface Booking {
   id: string;
@@ -105,8 +106,10 @@ const BookingsPage: React.FC = () => {
   };
 
   const handleOpenDetails = (booking: Booking) => {
+    console.log("Attempting to open dialog for booking:", booking);
     setSelectedBooking(booking);
     setIsDetailDialogOpen(true);
+    console.log("isDetailDialogOpen after setting:", true);
   };
 
   const currentYear = new Date().getFullYear();
@@ -226,7 +229,13 @@ const BookingsPage: React.FC = () => {
       </div>
 
       {/* Booking Details Dialog */}
-      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+      <Dialog open={isDetailDialogOpen} onOpenChange={(open) => {
+        console.log("Dialog onOpenChange called:", open);
+        setIsDetailDialogOpen(open);
+        if (!open) {
+          setSelectedBooking(null); // Clear selected booking when dialog closes
+        }
+      }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Détails de la Réservation</DialogTitle>
