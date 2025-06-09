@@ -125,10 +125,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             <span className="text-lg font-semibold">0°C</span> {/* Placeholder for temperature */}
           </div>
 
-          <div className="flex items-center space-x-2 sm:space-x-4"> {/* Reduced space-x for mobile */}
-            <Button variant="outline" className="flex items-center">
-              <Plus className="h-4 w-4" /> {/* Always show Plus icon */}
-              <span className="ml-2 hidden lg:inline-block">Actions rapides</span> {/* Show text only on large screens */}
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            <Button variant="outline" className="flex items-center px-2 md:px-4">
+              <Plus className="h-4 w-4" />
+              <span className="ml-2 hidden xl:inline-block">Actions rapides</span> {/* Hidden below xl */}
             </Button>
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
@@ -136,16 +136,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full flex items-center space-x-2">
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full flex items-center justify-center md:w-auto md:px-2"> {/* Adjust width/padding for md */}
                   <Avatar className="h-8 w-8">
                     <AvatarImage src="/avatars/01.png" alt="Thomas" />
                     <AvatarFallback>TH</AvatarFallback>
                   </Avatar>
-                  <div className="hidden lg:flex flex-col items-start"> {/* Show name/role only on large screens */}
+                  <div className="hidden xl:flex flex-col items-start ml-2"> {/* Only show text on xl */}
                     <span className="text-sm font-medium">Thomas</span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">Compte admin</span>
+                    <span className="text-xs leading-none text-gray-500 dark:text-gray-400">Compte admin</span>
                   </div>
-                  <ChevronDown className="h-4 w-4 ml-2" />
+                  <ChevronDown className="h-4 w-4 ml-2 hidden md:inline-block" /> {/* Show chevron from md up */}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
