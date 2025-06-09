@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addDays, subDays, differenceInDays, isValid, max, min } from 'date-fns';
 import { fr } from 'date-fns/locale'; // Pour le formatage en français
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,8 @@ const BookingPlanningGrid: React.FC = () => {
   const [housekeepingTasks, setHousekeepingTasks] = useState<KrossbookingHousekeepingTask[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [gridContentWidth, setGridContentWidth] = useState(0);
 
   useEffect(() => {
     const loadReservationsAndTasks = async () => {
@@ -70,6 +72,20 @@ const BookingPlanningGrid: React.FC = () => {
     loadReservationsAndTasks();
   }, [currentMonth]);
 
+  useEffect(() => {
+    const updateGridWidth = () => {
+      if (gridRef.current) {
+        // Subtract the fixed property column width to get the width available for day cells
+        setGridContentWidth(gridRef.current.offsetWidth - propertyColumnWidth);
+      }
+    };
+
+    updateGridWidth(); // Initial width calculation
+    window.addEventListener('resize', updateGridWidth); // Update on resize
+
+    return () => window.removeEventListener('resize', updateGridWidth);
+  }, [daysInMonth.length]); // Recalculate if number of days changes (e.g., different month)
+
   const daysInMonth = useMemo(() => {
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
@@ -84,8 +100,8 @@ const BookingPlanningGrid: React.FC = () => {
     setCurrentMonth(addMonths(currentMonth, 1));
   };
 
-  const dayCellWidth = 80;
-  const propertyColumnWidth = 150;
+  const propertyColumnWidth = 150; // Fixed width for the property name column
+  const actualDayCellWidth = daysInMonth.length > 0 ? gridContentWidth / daysInMonth.length : 0;
 
   const getTaskIcon = (status: string) => {
     switch (status.toLowerCase()) {
@@ -112,7 +128,7 @@ const BookingPlanningGrid: React.FC = () => {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="p-4 overflow-x-auto">
+      <CardContent className="p-4"> {/* Removed overflow-x-auto here */}
         {loading && <p className="text-gray-500">Chargement des réservations et tâches...</p>}
         {error && (
           <Alert variant="destructive" className="mb-4">
@@ -125,19 +141,23 @@ const BookingPlanningGrid: React.FC = () => {
           <p className="text-gray-500">Aucune réservation ou tâche trouvée pour la chambre "{defaultRoomName}".</p>
         )}
         {!loading && !error && (reservations.length > 0 || housekeepingTasks.length > 0) && (
-          <div className="grid-container" style={{
-            gridTemplateColumns: `minmax(${propertyColumnWidth}px, 0.5fr) repeat(${daysInMonth.length}, ${dayCellWidth}px)`,
-            minWidth: `${propertyColumnWidth + daysInMonth.length * dayCellWidth}px`,
-            gridAutoRows: '40px',
-            position: 'relative',
-          }}>
+          <div 
+            ref={gridRef}
+            className="grid-container" 
+            style={{
+              gridTemplateColumns: `minmax(${propertyColumnWidth}px, 0.5fr) repeat(${daysInMonth.length}, 1fr)`, // Use 1fr for flexible columns
+              // minWidth removed as it's no longer needed for fixed width
+              gridAutoRows: '40px',
+              position: 'relative',
+            }}
+          >
             {/* Header Row 1: Empty cell + Day numbers */}
             <div className="grid-cell header-cell sticky left-0 z-10 bg-white dark:bg-gray-950 border-b border-r col-span-1"></div>
             {daysInMonth.map((day, index) => (
               <div
                 key={index}
                 className="grid-cell header-cell text-center font-semibold border-b border-r"
-                style={{ width: `${dayCellWidth}px` }}
+                // width style removed as it's now handled by 1fr
               >
                 {format(day, 'dd', { locale: fr })}
               </div>
@@ -149,7 +169,7 @@ const BookingPlanningGrid: React.FC = () => {
               <div
                 key={`day-name-${index}`}
                 className="grid-cell header-cell text-center text-xs text-gray-500 border-b border-r"
-                style={{ width: `${dayCellWidth}px` }}
+                // width style removed
               >
                 {format(day, 'EEE', { locale: fr })}
               </div>
@@ -173,7 +193,7 @@ const BookingPlanningGrid: React.FC = () => {
                   <div
                     key={`${defaultRoomId}-${format(day, 'yyyy-MM-dd')}-bg`}
                     className={`grid-cell border-b border-r relative flex flex-col justify-center items-center ${isSameDay(day, new Date()) ? 'bg-blue-50 dark:bg-blue-950' : 'bg-gray-50 dark:bg-gray-800'}`}
-                    style={{ width: `${dayCellWidth}px` }}
+                    // width style removed
                   >
                     {/* Housekeeping Tasks Icon */}
                     {tasksForThisDay.length > 0 && (
@@ -246,13 +266,13 @@ const BookingPlanningGrid: React.FC = () => {
 
                   if (isSingleDayStay) {
                     // For single-day stays, center the bar within the cell and give it half the cell's width
-                    calculatedLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 4); // Start at 1/4 of the cell
-                    calculatedWidth = dayCellWidth / 2; // Span half the cell
+                    calculatedLeft = propertyColumnWidth + (startIndex * actualDayCellWidth) + (actualDayCellWidth / 4); // Start at 1/4 of the cell
+                    calculatedWidth = actualDayCellWidth / 2; // Span half the cell
                   } else {
                     // For multi-day stays, start at the center of the first day and end at the center of the last day
-                    calculatedLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 2);
+                    calculatedLeft = propertyColumnWidth + (startIndex * actualDayCellWidth) + (actualDayCellWidth / 2);
                     // Width spans from center of startIndex to center of endIndex
-                    calculatedWidth = (endIndex - startIndex) * dayCellWidth;
+                    calculatedWidth = (endIndex - startIndex) * actualDayCellWidth;
                   }
 
                   const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
