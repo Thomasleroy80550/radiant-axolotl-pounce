@@ -160,25 +160,36 @@ const BookingPlanningGrid: React.FC = () => {
                 .map((reservation) => {
                   const checkIn = parseISO(reservation.check_in_date);
                   const checkOut = parseISO(reservation.check_out_date); // This is the day *after* the last night
-                  const lastNight = addDays(checkOut, -1); // The actual last night of the stay
 
-                  const monthStart = startOfMonth(currentMonth);
-                  const monthEnd = endOfMonth(currentMonth);
+                  // Calculate the number of nights (days occupied)
+                  const numberOfNights = differenceInDays(checkOut, checkIn);
 
-                  // Determine the effective visible start and end of the reservation bar within the current month
-                  const visibleCheckIn = checkIn < monthStart ? monthStart : checkIn;
-                  const visibleLastNight = lastNight > monthEnd ? monthEnd : lastNight;
-
-                  // If reservation doesn't overlap with current month, don't render
-                  if (visibleCheckIn > visibleLastNight) {
+                  if (numberOfNights <= 0) {
+                    console.warn(`DEBUG: Skipping invalid reservation ${reservation.id} with check-in ${reservation.check_in_date} and check-out ${reservation.check_out_date}`);
                     return null;
                   }
 
-                  const startIndex = daysInMonth.findIndex(d => isSameDay(d, visibleCheckIn));
-                  const endIndex = daysInMonth.findIndex(d => isSameDay(d, visibleLastNight));
+                  // Determine the effective visible start and end of the reservation bar within the current month
+                  const monthStart = startOfMonth(currentMonth);
+                  const monthEnd = endOfMonth(currentMonth);
 
-                  if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
-                    console.warn(`DEBUG: Reservation ${reservation.id} dates not found in current month's days array or invalid range. Visible range: ${format(visibleCheckIn, 'yyyy-MM-dd')} to ${format(visibleLastNight, 'yyyy-MM-dd')}. Start Index: ${startIndex}, End Index: ${endIndex}`);
+                  // The actual last night of the stay
+                  const lastOccupiedDay = addDays(checkOut, -1);
+
+                  // Determine the visible start and end dates for the bar within the current month
+                  const visibleStartDay = checkIn < monthStart ? monthStart : checkIn;
+                  const visibleEndDay = lastOccupiedDay > monthEnd ? monthEnd : lastOccupiedDay;
+
+                  // If the visible range is invalid (e.g., reservation doesn't overlap with current month)
+                  if (visibleStartDay > visibleEndDay) {
+                    return null;
+                  }
+
+                  const startIndex = daysInMonth.findIndex(d => isSameDay(d, visibleStartDay));
+                  const endIndex = daysInMonth.findIndex(d => isSameDay(d, visibleEndDay));
+
+                  if (startIndex === -1 || endIndex === -1) {
+                    console.warn(`DEBUG: Reservation ${reservation.id} visible dates not found in current month's days array. Visible start: ${format(visibleStartDay, 'yyyy-MM-dd')}, Visible end: ${format(visibleEndDay, 'yyyy-MM-dd')}`);
                     return null;
                   }
 
@@ -186,9 +197,10 @@ const BookingPlanningGrid: React.FC = () => {
                   let barWidth = (endIndex - startIndex + 1) * dayCellWidth;
                   let barBorderClasses = '';
 
-                  const isOriginalCheckInVisible = isSameDay(checkIn, visibleCheckIn);
-                  const isOriginalLastNightVisible = isSameDay(lastNight, visibleLastNight);
-                  const isSingleNightBooking = isSameDay(checkIn, lastNight); // True if it's a 1-night stay
+                  const isOriginalCheckInVisible = isSameDay(checkIn, visibleStartDay);
+                  const isOriginalCheckOutVisible = isSameDay(lastOccupiedDay, visibleEndDay); // Check if the original last occupied day is visible
+
+                  const isSingleNightBooking = numberOfNights === 1;
 
                   if (isSingleNightBooking) {
                     // For single-night bookings, it's a half-day bar centered in the cell
@@ -202,22 +214,21 @@ const BookingPlanningGrid: React.FC = () => {
                       barWidth -= halfDayWidth; // Reduce width from left
                       barBorderClasses += ' rounded-l-full';
                     }
-                    if (isOriginalLastNightVisible) {
+                    if (isOriginalCheckOutVisible) {
                       barWidth -= halfDayWidth; // Reduce width from right
                       barBorderClasses += ' rounded-r-full';
                     }
                   }
 
                   // If the reservation spans across months, ensure no rounding on the "cut" side
-                  if (!isOriginalCheckInVisible) { // Starts before current month
+                  if (!isOriginalCheckInVisible && !isSingleNightBooking) { // Starts before current month
                     barBorderClasses = barBorderClasses.replace(' rounded-l-full', '');
                   }
-                  if (!isOriginalLastNightVisible) { // Ends after current month
+                  if (!isOriginalCheckOutVisible && !isSingleNightBooking) { // Ends after current month
                     barBorderClasses = barBorderClasses.replace(' rounded-r-full', '');
                   }
 
                   const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
-                  const numberOfNights = differenceInDays(checkOut, checkIn);
 
                   return (
                     <div
@@ -231,7 +242,7 @@ const BookingPlanningGrid: React.FC = () => {
                         marginTop: '2px', // Small margin from the top of the grid row
                         marginBottom: '2px', // Small margin from the bottom of the grid row
                       }}
-                      title={`${reservation.guest_name} (${channelInfo.name}, ${reservation.status}) - Du ${format(checkIn, 'dd/MM/yyyy', { locale: fr })} au ${format(lastNight, 'dd/MM/yyyy', { locale: fr })} (Départ le ${format(checkOut, 'dd/MM/yyyy', { locale: fr })})`}
+                      title={`${reservation.guest_name} (${channelInfo.name}, ${reservation.status}) - Du ${format(checkIn, 'dd/MM/yyyy', { locale: fr })} au ${format(lastOccupiedDay, 'dd/MM/yyyy', { locale: fr })} (Départ le ${format(checkOut, 'dd/MM/yyyy', { locale: fr })})`}
                     >
                       <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
                       <span className="mr-1">€ {numberOfNights}</span>
