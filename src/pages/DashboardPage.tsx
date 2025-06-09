@@ -16,12 +16,89 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import React, { useState, useEffect, useMemo } from 'react';
+import { getUserRooms, UserRoom } from '@/lib/user-room-api';
+import { fetchKrossbookingReservations } from '@/lib/krossbooking';
+import { format, parseISO, isAfter, differenceInDays, startOfYear, endOfYear, isWithinInterval } from 'date-fns';
+import { fr } from 'date-fns/locale';
+
+interface KrossbookingReservation {
+  id: string;
+  guest_name: string;
+  property_name: string;
+  check_in_date: string;
+  check_out_date: string;
+  status: string;
+  amount: string;
+  cod_channel?: string;
+  ota_id?: string;
+  channel_identifier?: string;
+}
 
 const DashboardPage = () => {
   const currentYear = new Date().getFullYear();
   const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
 
-  // Donut Chart Data
+  const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
+  const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
+  const [loadingReservations, setLoadingReservations] = useState<boolean>(true);
+  const [errorReservations, setErrorReservations] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadReservations = async () => {
+      setLoadingReservations(true);
+      setErrorReservations(null);
+      try {
+        const fetchedUserRooms = await getUserRooms();
+        setUserRooms(fetchedUserRooms);
+
+        const roomIds = fetchedUserRooms.map(room => room.room_id);
+
+        if (roomIds.length === 0) {
+          setReservations([]);
+          setLoadingReservations(false);
+          return;
+        }
+
+        const fetchedReservations = await fetchKrossbookingReservations(roomIds);
+        setReservations(fetchedReservations);
+      } catch (err: any) {
+        setErrorReservations(`Erreur lors du chargement des réservations : ${err.message}`);
+        console.error("Error in loadReservations for DashboardPage:", err);
+      } finally {
+        setLoadingReservations(false);
+      }
+    };
+
+    loadReservations();
+  }, []);
+
+  const currentYearReservations = useMemo(() => {
+    const yearStart = startOfYear(new Date(currentYear, 0, 1));
+    const yearEnd = endOfYear(new Date(currentYear, 0, 1));
+
+    return reservations.filter(res => {
+      const checkInDate = parseISO(res.check_in_date);
+      return isWithinInterval(checkInDate, { start: yearStart, end: yearEnd });
+    });
+  }, [reservations, currentYear]);
+
+  const nextArrival = useMemo(() => {
+    const now = new Date();
+    const upcoming = currentYearReservations.filter(res => isAfter(parseISO(res.check_in_date), now))
+      .sort((a, b) => parseISO(a.check_in_date).getTime() - parseISO(b.check_in_date).getTime());
+    return upcoming.length > 0 ? upcoming[0] : null;
+  }, [currentYearReservations]);
+
+  const totalNightsYear = useMemo(() => {
+    return currentYearReservations.reduce((sum, res) => {
+      const checkIn = parseISO(res.check_in_date);
+      const checkOut = parseISO(res.check_out_date);
+      return sum + differenceInDays(checkOut, checkIn);
+    }, 0);
+  }, [currentYearReservations]);
+
+  // Donut Chart Data (still static for now, as it represents channel distribution, not just total bookings)
   const activityData = [
     { name: 'Airbnb', value: 400, color: '#2563eb' }, // blue-600
     { name: 'Booking', value: 300, color: '#dc2626' }, // red-600
@@ -79,7 +156,7 @@ const DashboardPage = () => {
     <MainLayout>
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-2">Bonjour 👋</h1>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">Nous sommes le 8 juin 2025</p>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
 
         <div className="flex space-x-2 mb-8">
           {years.map((year) => (
@@ -137,36 +214,48 @@ const DashboardPage = () => {
               <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <p className="text-xl font-bold">11 juin à 15h</p>
-                <p className="text-sm text-gray-500">Prochaine arrivée</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xl font-bold">28</p>
-                  <p className="text-sm text-gray-500">Réservations sur l'année</p>
-                </div>
-                <div>
-                  <p className="text-xl font-bold">3</p>
-                  <p className="text-sm text-gray-500">Nuits sur l'année</p>
-                </div>
-                <div>
-                  <p className="text-xl font-bold">5</p>
-                  <p className="text-sm text-gray-500">Voyageurs sur l'année</p>
-                </div>
-                <div>
-                  <p className="text-xl font-bold">62.82%</p>
-                  <p className="text-sm text-gray-500">Occupation sur l'année</p>
-                </div>
-                <div>
-                  <p className="text-xl font-bold">4398€</p>
-                  <p className="text-sm text-gray-500">Prix net / nuit</p>
-                </div>
-                <div>
-                  <p className="text-xl font-bold">4.4/5</p>
-                  <p className="text-sm text-gray-500">Votre note</p>
-                </div>
-              </div>
+              {loadingReservations ? (
+                <p className="text-gray-500">Chargement de l'activité...</p>
+              ) : errorReservations ? (
+                <p className="text-red-500">Erreur: {errorReservations}</p>
+              ) : userRooms.length === 0 ? (
+                <p className="text-gray-500">Veuillez ajouter des chambres via la page "Mon Profil" pour voir l'activité.</p>
+              ) : (
+                <>
+                  <div>
+                    <p className="text-xl font-bold">
+                      {nextArrival ? format(parseISO(nextArrival.check_in_date), 'dd MMMM à HH:mm', { locale: fr }) : 'Aucune'}
+                    </p>
+                    <p className="text-sm text-gray-500">Prochaine arrivée</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xl font-bold">{currentYearReservations.length}</p>
+                      <p className="text-sm text-gray-500">Réservations sur l'année</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">{totalNightsYear}</p>
+                      <p className="text-sm text-gray-500">Nuits sur l'année</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">{currentYearReservations.length}</p> {/* Simplified: counting reservations as guests */}
+                      <p className="text-sm text-gray-500">Voyageurs sur l'année</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">62.82%</p> {/* Static for now */}
+                      <p className="text-sm text-gray-500">Occupation sur l'année</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">4398€</p> {/* Static for now */}
+                      <p className="text-sm text-gray-500">Prix net / nuit</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">4.4/5</p>
+                      <p className="text-sm text-gray-500">Votre note</p>
+                    </div>
+                  </div>
+                </>
+              )}
               <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Voir mes avis -&gt;</Button>
             </CardContent>
           </Card>
