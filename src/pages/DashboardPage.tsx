@@ -199,23 +199,21 @@ const DashboardPage = () => {
                 </Alert>
               ) : (
                 <>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-2xl font-bold text-green-600">{financialData.venteAnnee.toFixed(2)}€</p>
+                  <div className="grid grid-cols-2 gap-4"> {/* Use grid for better alignment */}
+                    <div className="flex flex-col items-start">
+                      <p className="text-xl md:text-2xl font-bold text-green-600">{financialData.venteAnnee.toFixed(2)}€</p>
                       <p className="text-sm text-gray-500">Vente sur l'année</p>
                     </div>
-                    <div>
-                      <p className="text-2xl font-bold text-orange-600">{financialData.rentreeArgentAnnee.toFixed(2)}€</p>
+                    <div className="flex flex-col items-start">
+                      <p className="text-xl md:text-2xl font-bold text-orange-600">{financialData.rentreeArgentAnnee.toFixed(2)}€</p>
                       <p className="text-sm text-gray-500">Rentré d'argent sur l'année</p>
                     </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-2xl font-bold text-red-600">{financialData.fraisAnnee.toFixed(2)}€</p>
+                    <div className="flex flex-col items-start">
+                      <p className="text-xl md:text-2xl font-bold text-red-600">{financialData.fraisAnnee.toFixed(2)}€</p>
                       <p className="text-sm text-gray-500">Frais de gestion sur l'année</p>
                     </div>
-                    <div>
-                      <p className="text-2xl font-bold text-green-600">{financialData.resultatAnnee.toFixed(2)}€</p>
+                    <div className="flex flex-col items-start">
+                      <p className="text-xl md:text-2xl font-bold text-green-600">{financialData.resultatAnnee.toFixed(2)}€</p>
                       <p className="text-sm text-gray-500">Résultats sur l'année</p>
                     </div>
                   </div>
