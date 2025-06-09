@@ -20,6 +20,10 @@ interface Booking {
   cod_channel?: string;
 }
 
+// Définir l'ID et le nom de la chambre à afficher sur cette page
+const targetRoomId = '62'; 
+const targetRoomName = 'Chambre 62'; 
+
 const BookingsPage: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -30,12 +34,12 @@ const BookingsPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        // Fetch all reservations (no roomId provided)
-        const fetchedBookings = await fetchKrossbookingReservations();
+        // Fetch reservations for the specific room ID
+        const fetchedBookings = await fetchKrossbookingReservations(targetRoomId);
         setBookings(fetchedBookings);
-        console.log("Fetched bookings for BookingsPage:", fetchedBookings);
+        console.log(`Fetched bookings for BookingsPage (Room ${targetRoomId}):`, fetchedBookings);
       } catch (err: any) {
-        setError(`Erreur lors du chargement des réservations : ${err.message}`);
+        setError(`Erreur lors du chargement des réservations pour la chambre ${targetRoomName} : ${err.message}`);
         console.error("Error in loadBookings for BookingsPage:", err);
       } finally {
         setLoading(false);
@@ -43,7 +47,7 @@ const BookingsPage: React.FC = () => {
     };
 
     loadBookings();
-  }, []);
+  }, []); // Empty dependency array means this runs once on mount
 
   const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -64,7 +68,7 @@ const BookingsPage: React.FC = () => {
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
-        <h1 className="text-3xl font-bold mb-6">Réservations</h1>
+        <h1 className="text-3xl font-bold mb-6">Réservations pour {targetRoomName}</h1>
         <Card className="shadow-md">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Liste de vos réservations</CardTitle>
@@ -79,7 +83,7 @@ const BookingsPage: React.FC = () => {
               </Alert>
             )}
             {!loading && !error && bookings.length === 0 && (
-              <p className="text-gray-500">Aucune réservation trouvée.</p>
+              <p className="text-gray-500">Aucune réservation trouvée pour la chambre {targetRoomName}.</p>
             )}
             {!loading && !error && bookings.length > 0 && (
               <div className="overflow-x-auto">
