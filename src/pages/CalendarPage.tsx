@@ -10,8 +10,8 @@ import { ChevronLeft, ChevronRight, Home, CalendarDays, User, DollarSign } from 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { fetchKrossbookingReservations } from '@/lib/krossbooking';
-import { Calendar } from '@/components/ui/calendar'; // Import Calendar component
-import { Badge } from '@/components/ui/badge'; // Import Badge for reservation list
+import { Calendar } from '@/components/ui/calendar';
+import { Badge } from '@/components/ui/badge';
 
 interface KrossbookingReservation {
   id: string;
@@ -29,10 +29,20 @@ interface KrossbookingReservation {
 const defaultRoomId = '36';
 const defaultRoomName = 'Ma Chambre par défaut (2c)';
 
+// Mapping des codes de canal Krossbooking vers des noms et couleurs Tailwind CSS
+const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
+  'AIRBNB': { name: 'Airbnb', bgColor: 'bg-red-600', textColor: 'text-white' },
+  'BOOKING': { name: 'Booking.com', bgColor: 'bg-blue-700', textColor: 'text-white' },
+  'ABRITEL': { name: 'Abritel', bgColor: 'bg-orange-600', textColor: 'text-white' },
+  'DIRECT': { name: 'Direct', bgColor: 'bg-purple-600', textColor: 'text-white' },
+  'HELLOKEYS': { name: 'Hello Keys', bgColor: 'bg-green-600', textColor: 'text-white' },
+  'UNKNOWN': { name: 'Autre', bgColor: 'bg-gray-600', textColor: 'text-white' },
+};
+
 const CalendarPage: React.FC = () => {
   const isMobile = useIsMobile();
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date()); // State for selected date in mobile calendar
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,13 +67,11 @@ const CalendarPage: React.FC = () => {
     loadReservations();
   }, []);
 
-  // Prepare modifiers for the Calendar component to highlight booked days
   const bookedDays = useMemo(() => {
     const dates: Date[] = [];
     reservations.forEach(res => {
       const checkIn = parseISO(res.check_in_date);
       const checkOut = parseISO(res.check_out_date);
-      // Iterate over each day of the reservation, excluding the checkout day itself
       eachDayOfInterval({ start: checkIn, end: addDays(checkOut, -1) }).forEach(day => {
         dates.push(day);
       });
@@ -71,10 +79,8 @@ const CalendarPage: React.FC = () => {
     return dates;
   }, [reservations]);
 
-  // Filter reservations for the selected date (or current month if no date selected)
   const filteredReservations = useMemo(() => {
     if (!selectedDate) {
-      // If no specific date is selected, show reservations for the current month
       const monthStart = startOfMonth(currentMonth);
       const monthEnd = endOfMonth(currentMonth);
       return reservations.filter(res => {
@@ -83,11 +89,9 @@ const CalendarPage: React.FC = () => {
         return (checkIn <= monthEnd && checkOut >= monthStart);
       }).sort((a, b) => parseISO(a.check_in_date).getTime() - parseISO(b.check_in_date).getTime());
     } else {
-      // Show reservations for the selected date
       return reservations.filter(res => {
         const checkIn = parseISO(res.check_in_date);
         const checkOut = parseISO(res.check_out_date);
-        // A reservation is relevant if the selected date is within its check-in and check-out period
         return isSameDay(selectedDate, checkIn) || (selectedDate > checkIn && selectedDate < checkOut);
       }).sort((a, b) => parseISO(a.check_in_date).getTime() - parseISO(b.check_in_date).getTime());
     }
@@ -145,8 +149,8 @@ const CalendarPage: React.FC = () => {
                       },
                     }}
                     className="rounded-md border"
-                    month={currentMonth} // Control month display
-                    onMonthChange={setCurrentMonth} // Allow changing month
+                    month={currentMonth}
+                    onMonthChange={setCurrentMonth}
                   />
                   <div className="mt-6 w-full">
                     <h3 className="text-xl font-semibold mb-4">
@@ -156,19 +160,27 @@ const CalendarPage: React.FC = () => {
                       <p className="text-gray-500">Aucune réservation trouvée pour cette période.</p>
                     ) : (
                       <div className="space-y-4">
-                        {filteredReservations.map((booking) => (
-                          <div key={booking.id} className="border-b pb-4 last:border-b-0 last:pb-0">
-                            <div className="flex items-center justify-between mb-2">
-                              <h3 className="font-bold text-md">{booking.guest_name}</h3>
-                              <Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge>
-                            </div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                              <p className="flex items-center"><Home className="h-4 w-4 mr-2" /> {booking.property_name}</p>
-                              <p className="flex items-center"><CalendarDays className="h-4 w-4 mr-2" /> Du {format(parseISO(booking.check_in_date), 'dd/MM', { locale: fr })} au {format(parseISO(booking.check_out_date), 'dd/MM', { locale: fr })}</p>
-                              <p className="flex items-center"><DollarSign className="h-4 w-4 mr-2" /> {booking.amount} ({booking.cod_channel || 'N/A'})</p>
-                            </div>
-                          </div>
-                        ))}
+                        {filteredReservations.map((booking) => {
+                          const channelInfo = channelColors[booking.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
+                          return (
+                            <Card key={booking.id} className="shadow-sm border border-gray-200 dark:border-gray-700">
+                              <CardContent className="p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center">
+                                    <span className={`w-3 h-3 rounded-full mr-2 ${channelInfo.bgColor}`}></span>
+                                    <h3 className="font-bold text-md">{booking.guest_name}</h3>
+                                  </div>
+                                  <Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge>
+                                </div>
+                                <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                                  <p className="flex items-center"><Home className="h-4 w-4 mr-2" /> {booking.property_name}</p>
+                                  <p className="flex items-center"><CalendarDays className="h-4 w-4 mr-2" /> Du {format(parseISO(booking.check_in_date), 'dd/MM', { locale: fr })} au {format(parseISO(booking.check_out_date), 'dd/MM', { locale: fr })}</p>
+                                  <p className="flex items-center"><DollarSign className="h-4 w-4 mr-2" /> {booking.amount} ({channelInfo.name})</p>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
