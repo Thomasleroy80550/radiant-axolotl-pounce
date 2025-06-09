@@ -7,7 +7,7 @@ export interface UserProfile {
   role?: string;
   google_sheet_id?: string;
   google_sheet_tab?: string;
-  objective_percentage?: number; // Nouvelle propriété
+  objective_amount?: number; // Nouvelle propriété pour l'objectif en Euros
 }
 
 /**
@@ -23,7 +23,7 @@ export async function getProfile(): Promise<UserProfile | null> {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, role, google_sheet_id, google_sheet_tab, objective_percentage') // Sélectionner la nouvelle colonne
+    .select('id, first_name, last_name, role, google_sheet_id, google_sheet_tab, objective_amount') // Sélectionner la nouvelle colonne
     .eq('id', user.id)
     .single();
 
