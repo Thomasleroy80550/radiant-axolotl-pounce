@@ -4,8 +4,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, Home, CalendarDays, DollarSign } from 'lucide-react';
-import { format, parseISO, isWithinInterval, startOfMonth, endOfMonth, isSameDay } from 'date-fns';
+import { format, parseISO, isWithinInterval, startOfMonth, endOfMonth, isSameDay, addDays, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import CustomCalendarDay from '@/components/CustomCalendarDay'; // Import CustomCalendarDay
 
 interface KrossbookingReservation {
   id: string;
@@ -31,6 +32,51 @@ const MobileCalendarView: React.FC<MobileCalendarViewProps> = ({ reservations, l
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
+  // Compute dayReservationSegments for CustomCalendarDay
+  const dayReservationSegments = useMemo(() => {
+    const map = new Map<string, { type: 'arrival' | 'departure' | 'middle' | 'single', channel: string }[]>();
+    reservations.forEach(res => {
+      const checkIn = parseISO(res.check_in_date);
+      const checkOut = parseISO(res.check_out_date); // This is the day *after* the last night
+
+      const numberOfNights = differenceInDays(checkOut, checkIn);
+
+      if (numberOfNights <= 0) { 
+        return; // Skip invalid reservations (e.g., check-out before or on check-in)
+      }
+
+      if (numberOfNights === 1) { // Single night stay
+        const dayKey = format(checkIn, 'yyyy-MM-dd');
+        const segmentsForDay = map.get(dayKey) || [];
+        segmentsForDay.push({
+          type: 'single', // New type for single-day bookings
+          channel: res.channel_identifier || 'UNKNOWN',
+        });
+        map.set(dayKey, segmentsForDay);
+      } else { // Multi-night stay
+        eachDayOfInterval({ start: checkIn, end: addDays(checkOut, -1) }).forEach(day => {
+          const dayKey = format(day, 'yyyy-MM-dd');
+          let type: 'arrival' | 'departure' | 'middle' | 'single';
+          if (isSameDay(day, checkIn)) {
+            type = 'arrival';
+          } else if (isSameDay(day, addDays(checkOut, -1))) { // Last night of the stay
+            type = 'departure';
+          } else {
+            type = 'middle';
+          }
+
+          const segmentsForDay = map.get(dayKey) || [];
+          segmentsForDay.push({
+            type: type,
+            channel: res.channel_identifier || 'UNKNOWN',
+          });
+          map.set(dayKey, segmentsForDay);
+        });
+      }
+    });
+    return map;
+  }, [reservations]);
+
   const filteredReservations = useMemo(() => {
     if (!selectedDate) {
       const monthStart = startOfMonth(currentMonth);
@@ -45,7 +91,7 @@ const MobileCalendarView: React.FC<MobileCalendarViewProps> = ({ reservations, l
         const checkIn = parseISO(res.check_in_date);
         const checkOut = parseISO(res.check_out_date);
         // A reservation is relevant if the selected date is between check-in (inclusive) and check-out (exclusive)
-        return isSameDay(selectedDate, checkIn) || (selectedDate > checkIn && selectedDate < checkOut);
+        return selectedDate >= checkIn && selectedDate < checkOut;
       }).sort((a, b) => parseISO(a.check_in_date).getTime() - parseISO(b.check_in_date).getTime());
     }
   }, [reservations, selectedDate, currentMonth]);
@@ -81,7 +127,16 @@ const MobileCalendarView: React.FC<MobileCalendarViewProps> = ({ reservations, l
             onMonthChange={setCurrentMonth}
             locale={fr}
             className="rounded-md border"
-            // No need for components.Day here, as we're not trying to draw bars on the calendar itself
+            components={{
+              Day: (props) => (
+                <CustomCalendarDay
+                  {...props}
+                  displayMonth={currentMonth}
+                  dayReservationSegments={dayReservationSegments}
+                  channelColors={channelColors}
+                />
+              ),
+            }}
           />
         </CardContent>
       </Card>

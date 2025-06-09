@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, Home } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import { fetchKrossbookingReservations } from '@/lib/krossbooking';
+// Removed fetchKrossbookingReservations as data will be passed via props
 
 interface KrossbookingReservation {
   id: string;
@@ -21,45 +21,20 @@ interface KrossbookingReservation {
   channel_identifier?: string; // Utilisé pour la logique de couleur dans le calendrier
 }
 
+interface BookingPlanningGridProps {
+  reservations: KrossbookingReservation[];
+  loading: boolean;
+  error: string | null;
+  channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } };
+}
+
 // Définir l'ID et le nom de la chambre par défaut à afficher
 const defaultRoomId = '36'; // Remplacez par l'ID de la chambre Krossbooking que vous souhaitez afficher
 const defaultRoomName = 'Ma Chambre par défaut (2c)'; // Nom affiché pour cette chambre
 
-// Mapping des codes de canal Krossbooking vers des noms et couleurs Tailwind CSS
-const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
-  'AIRBNB': { name: 'Airbnb', bgColor: 'bg-red-600', textColor: 'text-white' },
-  'BOOKING': { name: 'Booking.com', bgColor: 'bg-blue-700', textColor: 'text-white' },
-  'ABRITEL': { name: 'Abritel', bgColor: 'bg-orange-600', textColor: 'text-white' },
-  'DIRECT': { name: 'Direct', bgColor: 'bg-purple-600', textColor: 'text-white' },
-  'HELLOKEYS': { name: 'Hello Keys', bgColor: 'bg-green-600', textColor: 'text-white' },
-  'UNKNOWN': { name: 'Autre', bgColor: 'bg-gray-600', textColor: 'text-white' },
-};
-
-const BookingPlanningGrid: React.FC = () => {
+const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ reservations, loading, error, channelColors }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadReservations = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        console.log(`DEBUG: Fetching reservations for single room ID: ${defaultRoomId}`);
-        const fetchedReservations = await fetchKrossbookingReservations(defaultRoomId);
-        setReservations(fetchedReservations);
-        console.log("DEBUG: Fetched reservations for default room:", fetchedReservations); 
-      } catch (err: any) {
-        setError(`Erreur lors du chargement des réservations : ${err.message}`);
-        console.error("DEBUG: Error in loadReservations:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadReservations();
-  }, []); // Empty dependency array means this runs once on mount
+  // Reservations, loading, error, channelColors are now props
 
   const daysInMonth = useMemo(() => {
     const start = startOfMonth(currentMonth);
@@ -156,6 +131,7 @@ const BookingPlanningGrid: React.FC = () => {
 
               {/* Reservation Bars (Overlay) */}
               {reservations
+                .filter(reservation => reservation.property_name === defaultRoomName) // Filter for the default room
                 .map((reservation) => {
                   const checkIn = parseISO(reservation.check_in_date);
                   const checkOut = parseISO(reservation.check_out_date);
@@ -180,13 +156,13 @@ const BookingPlanningGrid: React.FC = () => {
                     return null;
                   }
 
-                  // Calculate left position: property column width + (start day index * day cell width) + half of day cell width
-                  const barLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 2);
+                  // Calculate left position: property column width + (start day index * day cell width)
+                  const barLeft = propertyColumnWidth + (startIndex * dayCellWidth);
                   
-                  // Calculate width: (end day index - start day index) * day cell width
-                  // This spans from the start of the start day to the start of the end day.
-                  // We need to add half a day cell width to the end to reach the middle of the end day.
-                  const barWidth = (endIndex - startIndex) * dayCellWidth;
+                  // Calculate width: (number of days spanned) * day cell width
+                  // We need to include the check-out day in the span for visual representation
+                  const daysSpanned = differenceInDays(addDays(visibleCheckOut, 1), visibleCheckIn); // +1 to include the check-out day visually
+                  const barWidth = daysSpanned * dayCellWidth;
 
                   // Determine rounding classes
                   let barBorderClasses = '';
