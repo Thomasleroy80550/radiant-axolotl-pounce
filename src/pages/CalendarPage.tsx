@@ -27,7 +27,9 @@ interface KrossbookingReservation {
 }
 
 const CalendarPage: React.FC = () => {
-  const isMobile = useIsMobile();
+  // We no longer need isMobile for conditional rendering of the main grid,
+  // but it can be kept if other mobile-specific UI elements are planned.
+  // const isMobile = useIsMobile(); 
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]); // State to store user's rooms
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
@@ -80,6 +82,8 @@ const CalendarPage: React.FC = () => {
   };
 
   // Filter reservations for the current month to pass to MobileBookingList
+  // This part is no longer strictly needed if MobileBookingList is removed,
+  // but keeping it for now as the component is still imported.
   const currentMonthReservations = useMemo(() => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
@@ -99,11 +103,8 @@ const CalendarPage: React.FC = () => {
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Calendrier</h1>
         
-        {isMobile ? (
-          <MobileBookingList reservations={currentMonthReservations} loading={loading} error={error} />
-        ) : (
-          <BookingPlanningGrid />
-        )}
+        {/* Always render BookingPlanningGrid for a consistent monthly view */}
+        <BookingPlanningGrid />
         
         {/* You can keep or remove the "Événements à venir" section as it's separate from the grid */}
         <Card className="shadow-md mt-6">
