@@ -3,10 +3,11 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterv
 import { fr } from 'date-fns/locale'; // Pour le formatage en français
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Home } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle } from 'lucide-react'; // Added Sparkles, CheckCircle, Clock, XCircle
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import { fetchKrossbookingReservations } from '@/lib/krossbooking';
+import { fetchKrossbookingReservations, fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask } from '@/lib/krossbooking'; // Import fetchKrossbookingHousekeepingTasks and KrossbookingHousekeepingTask
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'; // Import Tooltip components
 
 interface KrossbookingReservation {
   id: string;
@@ -38,11 +39,12 @@ const channelColors: { [key: string]: { name: string; bgColor: string; textColor
 const BookingPlanningGrid: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
+  const [housekeepingTasks, setHousekeepingTasks] = useState<KrossbookingHousekeepingTask[]>([]); // New state for tasks
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadReservations = async () => {
+    const loadReservationsAndTasks = async () => {
       setLoading(true);
       setError(null);
       try {
@@ -50,16 +52,25 @@ const BookingPlanningGrid: React.FC = () => {
         const fetchedReservations = await fetchKrossbookingReservations(defaultRoomId);
         setReservations(fetchedReservations);
         console.log("DEBUG: Fetched reservations for default room:", fetchedReservations); 
+
+        // Fetch housekeeping tasks for the current month
+        const monthStartFormatted = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
+        const monthEndFormatted = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
+        console.log(`DEBUG: Fetching housekeeping tasks for room ${defaultRoomId} from ${monthStartFormatted} to ${monthEndFormatted}`);
+        const fetchedTasks = await fetchKrossbookingHousekeepingTasks(monthStartFormatted, monthEndFormatted, undefined, parseInt(defaultRoomId));
+        setHousekeepingTasks(fetchedTasks);
+        console.log("DEBUG: Fetched housekeeping tasks:", fetchedTasks);
+
       } catch (err: any) {
-        setError(`Erreur lors du chargement des réservations : ${err.message}`);
-        console.error("DEBUG: Error in loadReservations:", err);
+        setError(`Erreur lors du chargement des données : ${err.message}`);
+        console.error("DEBUG: Error in loadReservationsAndTasks:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    loadReservations();
-  }, []); // Empty dependency array means this runs once on mount
+    loadReservationsAndTasks();
+  }, [currentMonth]); // Re-fetch when month changes
 
   const daysInMonth = useMemo(() => {
     const start = startOfMonth(currentMonth);
@@ -78,6 +89,16 @@ const BookingPlanningGrid: React.FC = () => {
   const dayCellWidth = 80; // px, width of each full day column
   const propertyColumnWidth = 150; // px, width of the property name column
 
+  // Function to get icon based on task status
+  const getTaskIcon = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'completed': return <CheckCircle className="h-3 w-3 text-green-500" />;
+      case 'pending': return <Clock className="h-3 w-3 text-yellow-500" />;
+      case 'cancelled': return <XCircle className="h-3 w-3 text-red-500" />;
+      default: return <Sparkles className="h-3 w-3 text-purple-500" />;
+    }
+  };
+
   return (
     <Card className="shadow-md">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -95,7 +116,7 @@ const BookingPlanningGrid: React.FC = () => {
         </div>
       </CardHeader>
       <CardContent className="p-4 overflow-x-auto">
-        {loading && <p className="text-gray-500">Chargement des réservations...</p>}
+        {loading && <p className="text-gray-500">Chargement des réservations et tâches...</p>}
         {error && (
           <Alert variant="destructive" className="mb-4">
             <Terminal className="h-4 w-4" />
@@ -103,10 +124,10 @@ const BookingPlanningGrid: React.FC = () => {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        {!loading && !error && reservations.length === 0 && (
-          <p className="text-gray-500">Aucune réservation trouvée pour la chambre "{defaultRoomName}".</p>
+        {!loading && !error && reservations.length === 0 && housekeepingTasks.length === 0 && (
+          <p className="text-gray-500">Aucune réservation ou tâche trouvée pour la chambre "{defaultRoomName}".</p>
         )}
-        {!loading && !error && reservations.length > 0 && (
+        {!loading && !error && (reservations.length > 0 || housekeepingTasks.length > 0) && (
           <div className="grid-container" style={{
             gridTemplateColumns: `minmax(${propertyColumnWidth}px, 0.5fr) repeat(${daysInMonth.length}, ${dayCellWidth}px)`,
             minWidth: `${propertyColumnWidth + daysInMonth.length * dayCellWidth}px`, // Ensure minimum width for scroll
@@ -146,13 +167,42 @@ const BookingPlanningGrid: React.FC = () => {
               </div>
 
               {/* Day Cells (Background Grid) for the property row */}
-              {daysInMonth.map((day, dayIndex) => (
-                <div
-                  key={`${defaultRoomId}-${format(day, 'yyyy-MM-dd')}-bg`}
-                  className={`grid-cell border-b border-r ${isSameDay(day, new Date()) ? 'bg-blue-50 dark:bg-blue-950' : 'bg-gray-50 dark:bg-gray-800'}`}
-                  style={{ width: `${dayCellWidth}px` }}
-                ></div>
-              ))}
+              {daysInMonth.map((day, dayIndex) => {
+                const tasksForThisDay = housekeepingTasks.filter(task =>
+                  isSameDay(parseISO(task.date), day) && task.id_room.toString() === defaultRoomId
+                );
+
+                return (
+                  <div
+                    key={`${defaultRoomId}-${format(day, 'yyyy-MM-dd')}-bg`}
+                    className={`grid-cell border-b border-r relative ${isSameDay(day, new Date()) ? 'bg-blue-50 dark:bg-blue-950' : 'bg-gray-50 dark:bg-gray-800'}`}
+                    style={{ width: `${dayCellWidth}px` }}
+                  >
+                    {tasksForThisDay.length > 0 && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="absolute top-1 right-1 flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 cursor-pointer">
+                            {tasksForThisDay.length > 1 ? (
+                              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{tasksForThisDay.length}</span>
+                            ) : (
+                              getTaskIcon(tasksForThisDay[0].status)
+                            )}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="p-2 text-sm">
+                          <p className="font-bold mb-1">Tâches de ménage ({format(day, 'dd/MM', { locale: fr })}):</p>
+                          {tasksForThisDay.map((task, idx) => (
+                            <p key={idx} className="flex items-center">
+                              {getTaskIcon(task.status)}
+                              <span className="ml-1 capitalize">{task.task_type.replace('_', ' ')} - {task.status}</span>
+                            </p>
+                          ))}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                );
+              })}
 
               {/* Reservation Bars (Overlay) */}
               {reservations
@@ -180,13 +230,12 @@ const BookingPlanningGrid: React.FC = () => {
                     return null;
                   }
 
-                  // Calculate left position: property column width + (start day index * day cell width) + half of day cell width
-                  const barLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 2);
+                  // Calculate left position: property column width + (start day index * day cell width)
+                  const barLeft = propertyColumnWidth + (startIndex * dayCellWidth);
                   
-                  // Calculate width: (end day index - start day index) * day cell width
-                  // This spans from the start of the start day to the start of the end day.
-                  // We need to add half a day cell width to the end to reach the middle of the end day.
-                  const barWidth = (endIndex - startIndex) * dayCellWidth;
+                  // Calculate width: (number of visible days) * day cell width
+                  const numberOfVisibleDays = differenceInDays(visibleCheckOut, visibleCheckIn) + 1; // +1 to include the end day
+                  const barWidth = numberOfVisibleDays * dayCellWidth;
 
                   // Determine rounding classes
                   let barBorderClasses = '';
@@ -235,6 +284,29 @@ const BookingPlanningGrid: React.FC = () => {
                 <span className="text-sm text-gray-700 dark:text-gray-300">{value.name}</span>
               </div>
             ))}
+          </div>
+          <h3 className="text-md font-semibold mt-4 mb-3">Légende des tâches de ménage</h3>
+          <div className="flex flex-wrap gap-4">
+            <div className="flex items-center">
+              <Sparkles className="h-4 w-4 mr-2 text-purple-500" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">Générique / Autre</span>
+            </div>
+            <div className="flex items-center">
+              <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">Terminée</span>
+            </div>
+            <div className="flex items-center">
+              <Clock className="h-4 w-4 mr-2 text-yellow-500" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">En attente / En cours</span>
+            </div>
+            <div className="flex items-center">
+              <XCircle className="h-4 w-4 mr-2 text-red-500" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">Annulée</span>
+            </div>
+            <div className="flex items-center">
+              <span className="w-4 h-4 mr-2 flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-full">2+</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Plusieurs tâches</span>
+            </div>
           </div>
         </div>
       </CardContent>
