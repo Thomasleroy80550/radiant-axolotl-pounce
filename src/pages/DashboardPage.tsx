@@ -303,7 +303,7 @@ const DashboardPage = () => {
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center h-full">
+            <CardContent className="flex flex-col md:flex-row md:items-center md:justify-around p-4">
               {loadingActivityData ? (
                 <p className="text-gray-500">Chargement des données d'activité...</p>
               ) : activityDataError ? (
@@ -314,14 +314,14 @@ const DashboardPage = () => {
                 </Alert>
               ) : (
                 <>
-                  <ResponsiveContainer width="100%" height={200}>
+                  <ResponsiveContainer width="100%" height={250} className="md:w-1/2">
                     <PieChart isAnimationActive={true}>
                       <Pie
                         data={activityData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
+                        innerRadius={80}
+                        outerRadius={100}
                         fill="#8884d8"
                         paddingAngle={5}
                         dataKey="value"
@@ -335,7 +335,7 @@ const DashboardPage = () => {
                       <Tooltip />
                     </PieChart>
                   </ResponsiveContainer>
-                  <div className="text-sm space-y-1 mt-4">
+                  <div className="text-sm space-y-2 mt-4 md:mt-0 md:ml-4 md:w-1/2 flex flex-col items-start">
                     {activityData.map((item) => (
                       <div key={item.name} className="flex items-center">
                         <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: item.color }}></span>
@@ -345,7 +345,7 @@ const DashboardPage = () => {
                   </div>
                 </>
               )}
-              <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400 mt-4">Voir mes réservations -&gt;</Button>
+              <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400 mt-4 md:mt-0 md:self-end">Voir mes réservations -&gt;</Button>
             </CardContent>
           </Card>
 
