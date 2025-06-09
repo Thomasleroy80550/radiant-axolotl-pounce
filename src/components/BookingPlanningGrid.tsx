@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle, LogIn, LogOut } from 'lucide-react'; // Added LogIn, LogOut icons
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import { fetchKrossbookingReservations, fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask } from '@/lib/krossbooking'; // Import fetchKrossbookingHousekeepingTasks and KrossbookingHousekeepingTask
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'; // Import Tooltip components
+import { fetchKrossbookingReservations, fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask } from '@/lib/krossbooking'; // Import fetchKrossbookingReservations and KrossbookingHousekeepingTask
+import { Tooltip, TooltipContent, TooltipTrigger } => '@/components/ui/tooltip'; // Import Tooltip components
 
 interface KrossbookingReservation {
   id: string;
@@ -172,16 +172,30 @@ const BookingPlanningGrid: React.FC = () => {
                   isValid(parseISO(task.date)) && isSameDay(parseISO(task.date), day) && task.id_room.toString() === defaultRoomId
                 );
 
+                // Find reservations that start or end on this specific day
+                const arrivalsOnThisDay = reservations.filter(res =>
+                  isValid(parseISO(res.check_in_date)) && isSameDay(parseISO(res.check_in_date), day)
+                );
+                const departuresOnThisDay = reservations.filter(res =>
+                  isValid(parseISO(res.check_out_date)) && isSameDay(parseISO(res.check_out_date), day)
+                );
+
+                // Determine if it's a "changeover" day (arrival and departure on the same day)
+                const isChangeoverDay = arrivalsOnThisDay.some(arr =>
+                  departuresOnThisDay.some(dep => dep.id === arr.id)
+                );
+
                 return (
                   <div
                     key={`${defaultRoomId}-${format(day, 'yyyy-MM-dd')}-bg`}
-                    className={`grid-cell border-b border-r relative ${isSameDay(day, new Date()) ? 'bg-blue-50 dark:bg-blue-950' : 'bg-gray-50 dark:bg-gray-800'}`}
+                    className={`grid-cell border-b border-r relative flex flex-col justify-center items-center ${isSameDay(day, new Date()) ? 'bg-blue-50 dark:bg-blue-950' : 'bg-gray-50 dark:bg-gray-800'}`}
                     style={{ width: `${dayCellWidth}px` }}
                   >
+                    {/* Housekeeping Tasks Icon */}
                     {tasksForThisDay.length > 0 && (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <div className="absolute top-1 right-1 flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 cursor-pointer">
+                          <div className="absolute top-1 right-1 flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 cursor-pointer z-20">
                             {tasksForThisDay.length > 1 ? (
                               <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{tasksForThisDay.length}</span>
                             ) : (
@@ -199,6 +213,47 @@ const BookingPlanningGrid: React.FC = () => {
                           ))}
                         </TooltipContent>
                       </Tooltip>
+                    )}
+
+                    {/* Arrival/Departure Icons */}
+                    {isChangeoverDay ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-purple-500 text-white z-10">
+                            <Sparkles className="h-4 w-4" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="p-2 text-sm">
+                          Arrivée et Départ le même jour
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <>
+                        {arrivalsOnThisDay.length > 0 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-green-600 text-white z-10">
+                                <LogIn className="h-4 w-4" />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="p-2 text-sm">
+                              Jour d'arrivée
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {departuresOnThisDay.length > 0 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-red-600 text-white z-10">
+                                <LogOut className="h-4 w-4" />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="p-2 text-sm">
+                              Jour de départ
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </>
                     )}
                   </div>
                 );
@@ -218,85 +273,79 @@ const BookingPlanningGrid: React.FC = () => {
                   const monthStart = startOfMonth(currentMonth);
                   const monthEnd = endOfMonth(currentMonth);
 
-                  // Determine the effective visible start and end of the reservation bar within the current month
-                  const visibleCheckIn = max([checkIn, monthStart]);
-                  const visibleCheckOut = min([checkOut, monthEnd]);
+                  // Calculate the number of nights. If 0, it's a same-day arrival/departure.
+                  const numberOfNights = differenceInDays(checkOut, checkIn);
 
-                  // If reservation doesn't overlap with current month, don't render
-                  if (visibleCheckIn > visibleCheckOut) {
+                  // For the bar, we want it to represent the *occupied nights*.
+                  // So, if check-in is April 7 and check-out is April 8 (1 night), the bar covers April 7.
+                  // If check-in is April 7 and check-out is April 7 (0 nights), it's a single-day event.
+                  const barStartDate = checkIn;
+                  const barEndDate = numberOfNights > 0 ? subDays(checkOut, 1) : checkIn; // Bar ends on the last *occupied* night
+
+                  // Determine the effective visible start and end of the reservation bar within the current month
+                  const visibleBarStart = max([barStartDate, monthStart]);
+                  const visibleBarEnd = min([barEndDate, monthEnd]);
+
+                  // If reservation doesn't overlap with current month's occupied nights, don't render the bar
+                  if (visibleBarStart > visibleBarEnd) {
                     return null;
                   }
 
-                  const startIndex = daysInMonth.findIndex(d => isSameDay(d, visibleCheckIn));
-                  const endIndex = daysInMonth.findIndex(d => isSameDay(d, visibleCheckOut));
+                  const startIndex = daysInMonth.findIndex(d => isSameDay(d, visibleBarStart));
+                  const endIndex = daysInMonth.findIndex(d => isSameDay(d, visibleBarEnd));
 
                   if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
-                    console.warn(`DEBUG: Reservation ${reservation.id} dates not found in current month's days array or invalid range. Visible range: ${format(visibleCheckIn, 'yyyy-MM-dd')} to ${format(visibleCheckOut, 'yyyy-MM-dd')}. Start Index: ${startIndex}, End Index: ${endIndex}`);
+                    console.warn(`DEBUG: Reservation ${reservation.id} bar dates not found in current month's days array or invalid range. Visible bar range: ${format(visibleBarStart, 'yyyy-MM-dd')} to ${format(visibleBarEnd, 'yyyy-MM-dd')}. Start Index: ${startIndex}, End Index: ${endIndex}`);
                     return null;
                   }
 
                   // Calculate left position: property column width + (start day index * day cell width)
                   const barLeft = propertyColumnWidth + (startIndex * dayCellWidth);
                   
-                  // Calculate width: (number of visible days) * day cell width
-                  const numberOfVisibleDays = differenceInDays(visibleCheckOut, visibleCheckIn) + 1; // +1 to include the end day
-                  const barWidth = (numberOfVisibleDays * dayCellWidth);
+                  // Calculate width: (number of visible occupied days) * day cell width
+                  const numberOfVisibleOccupiedDays = differenceInDays(visibleBarEnd, visibleBarStart) + 1;
+                  const barWidth = (numberOfVisibleOccupiedDays * dayCellWidth);
 
                   const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
-                  const numberOfNights = isValid(checkIn) && isValid(checkOut) ? differenceInDays(checkOut, checkIn) : 0;
 
-                  // Determine if the actual start/end of the reservation is visible in this month's view
-                  const isActualStartVisible = isSameDay(checkIn, visibleCheckIn);
-                  const isActualEndVisible = isSameDay(checkOut, visibleCheckOut);
+                  // Only render the bar if there's at least one occupied night
+                  if (numberOfNights === 0 && !isSameDay(checkIn, checkOut)) {
+                    // This case should ideally not happen if checkIn and checkOut are valid and different
+                    return null;
+                  }
 
                   return (
-                    <div
-                      key={reservation.id}
-                      className={`absolute h-9 flex items-center text-xs font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm cursor-pointer hover:opacity-90 transition-opacity
-                        ${isActualStartVisible ? 'rounded-l-full' : 'rounded-none'}
-                        ${isActualEndVisible ? 'rounded-r-full' : 'rounded-none'}
-                        ${!isActualStartVisible && !isActualEndVisible ? 'rounded-none' : ''}
-                      `}
-                      style={{
-                        gridRow: '3', // Always on the third row (after two header rows)
-                        left: `${barLeft}px`,
-                        width: `${barWidth}px`,
-                        height: '36px', // Adjusted for better vertical centering
-                        marginTop: '2px', // Small margin from the top of the grid row
-                        marginBottom: '2px', // Small margin from the bottom of the grid row
-                      }}
-                    >
-                      {isActualStartVisible && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center justify-center w-6 h-full bg-black bg-opacity-20 rounded-l-full">
-                              <LogIn className="h-4 w-4 text-white" />
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent className="p-2 text-sm">
-                            Jour d'arrivée
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                      <span className="flex-grow text-center px-2"> {/* Added px-2 for internal padding */}
-                        <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
-                        <span className="mr-1">€ {numberOfNights}</span>
-                        <span className="mx-1">|</span>
-                        <span className="truncate">{reservation.guest_name}</span>
-                      </span>
-                      {isActualEndVisible && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center justify-center w-6 h-full bg-black bg-opacity-20 rounded-r-full">
-                              <LogOut className="h-4 w-4 text-white" />
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent className="p-2 text-sm">
-                            Jour de départ
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                    </div>
+                    <Tooltip key={reservation.id}>
+                      <TooltipTrigger asChild>
+                        <div
+                          className={`absolute h-9 flex items-center justify-center text-xs font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm cursor-pointer hover:opacity-90 transition-opacity rounded-full`}
+                          style={{
+                            gridRow: '3', // Always on the third row (after two header rows)
+                            left: `${barLeft}px`,
+                            width: `${barWidth}px`,
+                            height: '36px', // Adjusted for better vertical centering
+                            marginTop: '2px', // Small margin from the top of the grid row
+                            marginBottom: '2px', // Small margin from the bottom of the grid row
+                            zIndex: 5, // Ensure bars are above background cells but below icons
+                          }}
+                        >
+                          <span className="px-2">
+                            <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
+                            <span className="mr-1">€ {numberOfNights}</span>
+                            <span className="mx-1">|</span>
+                            <span className="truncate">{reservation.guest_name}</span>
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="p-2 text-sm">
+                        <p className="font-bold">{reservation.guest_name}</p>
+                        <p>Du {format(checkIn, 'dd/MM/yyyy', { locale: fr })} au {format(checkOut, 'dd/MM/yyyy', { locale: fr })}</p>
+                        <p>{numberOfNights} nuit(s)</p>
+                        <p>Statut: {reservation.status}</p>
+                        <p>Montant: {reservation.amount}</p>
+                        <p>Canal: {channelInfo.name}</p>
+                      </TooltipContent>
+                    </Tooltip>
                   );
                 })}
             </React.Fragment>
@@ -338,11 +387,15 @@ const BookingPlanningGrid: React.FC = () => {
             </div>
             <div className="flex items-center">
               <LogIn className="h-4 w-4 mr-2 text-white bg-green-600 rounded-full p-0.5" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Jour d'arrivée (sur la réservation)</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Jour d'arrivée (icône sur le jour)</span>
             </div>
             <div className="flex items-center">
               <LogOut className="h-4 w-4 mr-2 text-white bg-red-600 rounded-full p-0.5" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Jour de départ (sur la réservation)</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Jour de départ (icône sur le jour)</span>
+            </div>
+            <div className="flex items-center">
+              <Sparkles className="h-4 w-4 mr-2 text-white bg-purple-500 rounded-full p-0.5" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">Arrivée & Départ le même jour</span>
             </div>
           </div>
         </div>
