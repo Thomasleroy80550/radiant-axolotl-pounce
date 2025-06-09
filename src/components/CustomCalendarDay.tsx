@@ -14,31 +14,20 @@ const CustomCalendarDay: React.FC<CustomCalendarDayProps> = ({ date, displayMont
   const dayKey = format(date, 'yyyy-MM-dd');
   const segments = dayReservationSegments.get(dayKey);
 
-  // Determine if the day is part of the current month's display
   const isOutside = !format(date, 'yyyy-MM').includes(format(displayMonth, 'yyyy-MM'));
 
-  let customClasses = "";
-  let channelBgColor = "";
-  let channelTextColor = "";
-  let isBooked = false;
+  let segmentType: 'arrival' | 'departure' | 'middle' | 'single' | null = null;
+  let channelIdentifier: string = 'UNKNOWN';
 
   if (segments && segments.length > 0) {
-    isBooked = true;
     // For simplicity, take the first segment. If multiple reservations overlap, this will pick one.
     const segment = segments[0]; 
-    const channelInfo = channelColors[segment.channel] || channelColors['UNKNOWN'];
-    channelBgColor = channelInfo.bgColor;
-    channelTextColor = channelInfo.textColor;
-
-    if (segment.type === 'arrival') {
-      customClasses += ' rounded-l-full';
-    } else if (segment.type === 'departure') {
-      customClasses += ' rounded-r-full';
-    } else if (segment.type === 'single') {
-      customClasses += ' rounded-full'; // Fully rounded for single-day bookings
-    }
-    // For 'middle' type, no specific rounding
+    segmentType = segment.type;
+    channelIdentifier = segment.channel;
   }
+
+  const channelInfo = channelColors[channelIdentifier] || channelColors['UNKNOWN'];
+  const isBooked = segmentType !== null;
 
   return (
     <div className={cn("rdp-day", props.className)} style={props.style}>
@@ -46,20 +35,33 @@ const CustomCalendarDay: React.FC<CustomCalendarDayProps> = ({ date, displayMont
         {...props.buttonProps}
         className={cn(
           "rdp-button",
-          "w-full h-full flex items-center justify-center text-sm font-medium",
+          "relative w-full h-full flex items-center justify-center text-sm font-medium overflow-hidden", // Added relative and overflow-hidden
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           "data-[selected]:bg-primary data-[selected]:text-primary-foreground data-[selected]:hover:bg-primary data-[selected]:hover:text-primary-foreground data-[selected]:focus:bg-primary data-[selected]:focus:text-primary-foreground",
           "data-[disabled]:text-muted-foreground data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed",
           "data-[outside]:text-muted-foreground data-[outside]:data-[selected]:bg-accent/50 data-[outside]:data-[selected]:text-muted-foreground data-[outside]:data-[selected]:hover:bg-accent/50 data-[outside]:data-[selected]:hover:text-muted-foreground",
           "data-[unavailable]:text-muted-foreground data-[unavailable]:opacity-50 data-[unavailable]:cursor-not-allowed",
           
-          // Apply custom booked styles
-          isBooked ? `${channelBgColor} ${channelTextColor} ${customClasses}` : "hover:bg-accent hover:text-accent-foreground",
+          // Apply text color for booked days
+          isBooked ? channelInfo.textColor : "text-foreground", // Default text color if not booked
           isBooked && isOutside ? "opacity-50" : "", // Dim booked days outside current month
           "transition-colors duration-100 ease-in-out" // Smooth transition for hover/selection
         )}
       >
-        {format(date, 'd')}
+        {isBooked && (
+          <div
+            className={cn(
+              "absolute top-0 h-full", // Fill vertical space
+              channelInfo.bgColor,
+              "transition-all duration-100 ease-in-out",
+              segmentType === 'arrival' && 'left-1/2 w-1/2 rounded-r-full', // Starts from middle, rounds right
+              segmentType === 'departure' && 'left-0 w-1/2 rounded-l-full', // Ends at middle, rounds left
+              segmentType === 'middle' && 'w-full rounded-none', // Full width, no rounding
+              segmentType === 'single' && 'w-full rounded-full', // Full width, full rounding
+            )}
+          ></div>
+        )}
+        <span className="relative z-10">{format(date, 'd')}</span> {/* Day number on top */}
       </button>
     </div>
   );
