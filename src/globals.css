@@ -150,35 +150,35 @@
 
 /* DayPicker specific styles for reservation highlights */
 .rdp-day_arrival {
-  background-color: transparent !important;
-  color: inherit !important;
-  background-image: linear-gradient(to bottom right, transparent 48%, hsl(var(--calendar-arrival-line)) 48%, hsl(var(--calendar-arrival-line)) 52%, transparent 52%) !important;
-  background-size: 100% 100% !important;
-  background-repeat: no-repeat !important;
-  border-radius: 0.25rem;
+  background-color: hsl(var(--calendar-reserved-bg)) !important; /* Solid background */
+  color: hsl(var(--calendar-reserved-fg)) !important;
+  border-top-left-radius: 0.25rem !important; /* Rounded left edge */
+  border-bottom-left-radius: 0.25rem !important; /* Rounded left edge */
+  border-top-right-radius: 0 !important; /* Ensure no right radius */
+  border-bottom-right-radius: 0 !important; /* Ensure no right radius */
 }
 
 .rdp-day_arrival:hover {
-  background-color: hsl(var(--calendar-arrival-line) / 0.1) !important;
+  background-color: hsl(var(--calendar-reserved-bg) / 0.9) !important;
 }
 
 .rdp-day_departure {
-  background-color: transparent !important;
-  color: inherit !important;
-  background-image: linear-gradient(to bottom left, transparent 48%, hsl(var(--calendar-departure-line)) 48%, hsl(var(--calendar-departure-line)) 52%, transparent 52%) !important;
-  background-size: 100% 100% !important;
-  background-repeat: no-repeat !important;
-  border-radius: 0.25rem;
+  background-color: hsl(var(--calendar-reserved-bg)) !important; /* Solid background */
+  color: hsl(var(--calendar-reserved-fg)) !important;
+  border-top-right-radius: 0.25rem !important; /* Rounded right edge */
+  border-bottom-right-radius: 0.25rem !important; /* Rounded right edge */
+  border-top-left-radius: 0 !important; /* Ensure no left radius */
+  border-bottom-left-radius: 0 !important; /* Ensure no left radius */
 }
 
 .rdp-day_departure:hover {
-  background-color: hsl(var(--calendar-departure-line) / 0.1) !important;
+  background-color: hsl(var(--calendar-reserved-bg) / 0.9) !important;
 }
 
 .rdp-day_reserved-middle {
   background-color: hsl(var(--calendar-reserved-bg)) !important;
   color: hsl(var(--calendar-reserved-fg)) !important;
-  border-radius: 0.25rem;
+  border-radius: 0 !important; /* No radius for middle days */
 }
 
 .rdp-day_reserved-middle:hover {
@@ -186,13 +186,13 @@
 }
 
 .rdp-day_single { /* Style for single-day bookings */
-  background-color: hsl(var(--calendar-arrival-line)) !important; /* Use arrival color for single day */
-  color: hsl(var(--primary-foreground)) !important;
-  border-radius: 0.25rem;
+  background-color: hsl(var(--calendar-reserved-bg)) !important; /* Use reserved color for single day */
+  color: hsl(var(--calendar-reserved-fg)) !important;
+  border-radius: 0.25rem !important; /* Full radius for single day */
 }
 
 .rdp-day_single:hover {
-  background-color: hsl(var(--calendar-arrival-line) / 0.9) !important;
+  background-color: hsl(var(--calendar-reserved-bg) / 0.9) !important;
 }
 
 .rdp-day_selected:not(.rdp-day_arrival):not(.rdp-day_departure):not(.rdp-day_reserved-middle):not(.rdp-day_single) {
