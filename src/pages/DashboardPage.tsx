@@ -27,10 +27,10 @@ const DashboardPage = () => {
   const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
 
   const [activityData, setActivityData] = useState([
-    { name: 'Airbnb', value: 0, color: '#2563eb' }, // blue-600
-    { name: 'Booking', value: 0, color: '#dc2626' }, // red-600
-    { name: 'Abritel', value: 0, color: '#d97706' }, // yellow-600
-    { name: 'Hello Keys', value: 0, color: '#16a34a' }, // green-600
+    { name: 'Airbnb', value: 0, color: '#1e40af' }, // blue-800
+    { name: 'Booking', value: 0, color: '#ef4444' }, // red-500
+    { name: 'Abritel', value: 0, color: '#3b82f6' }, // blue-500
+    { name: 'Hello Keys', value: 0, color: '#0e7490' }, // cyan-700
     { name: 'Proprio', value: 0, color: '#4f46e5' }, // indigo-600 for PROPRIO
   ]);
   const [loadingActivityData, setLoadingActivityData] = useState(true);
@@ -51,6 +51,7 @@ const DashboardPage = () => {
       setLoadingActivityData(true);
       setActivityDataError(null);
       try {
+        // Fetch values from DG2, DH2, DI2, DJ2, DK2
         const data = await callGSheetProxy({ action: 'read_sheet', range: 'DG2:DK2' });
         console.log("DEBUG (DashboardPage): Fetched activity data from GSheet:", data);
 
@@ -58,11 +59,11 @@ const DashboardPage = () => {
           const [bookingValue, airbnbValue, abritelValue, helloKeysValue, proprioValue] = data[0].map(Number);
 
           setActivityData([
-            { name: 'Airbnb', value: isNaN(airbnbValue) ? 0 : airbnbValue, color: '#2563eb' },
-            { name: 'Booking', value: isNaN(bookingValue) ? 0 : bookingValue, color: '#dc2626' },
-            { name: 'Abritel', value: isNaN(abritelValue) ? 0 : abritelValue, color: '#d97706' },
-            { name: 'Hello Keys', value: isNaN(helloKeysValue) ? 0 : helloKeysValue, color: '#16a34a' },
-            { name: 'Proprio', value: isNaN(proprioValue) ? 0 : proprioValue, color: '#4f46e5' },
+            { name: 'Airbnb', value: isNaN(airbnbValue) ? 0 : airbnbValue, color: '#1e40af' }, // blue-800
+            { name: 'Booking', value: isNaN(bookingValue) ? 0 : bookingValue, color: '#ef4444' }, // red-500
+            { name: 'Abritel', value: isNaN(abritelValue) ? 0 : abritelValue, color: '#3b82f6' }, // blue-500
+            { name: 'Hello Keys', value: isNaN(helloKeysValue) ? 0 : helloKeysValue, color: '#0e7490' }, // cyan-700
+            { name: 'Proprio', value: isNaN(proprioValue) ? 0 : proprioValue, color: '#4f46e5' }, // indigo-600 for PROPRIO
           ]);
           toast.success("Données d'activité de location mises à jour !");
         } else {
