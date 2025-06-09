@@ -240,19 +240,26 @@ const BookingPlanningGrid: React.FC = () => {
                     return null;
                   }
 
-                  // Calculate left position: property column width + (start day index * day cell width)
-                  const barLeft = propertyColumnWidth + (startIndex * dayCellWidth);
-                  
-                  // Calculate width: (number of visible days covered by the bar) * day cell width
-                  const numberOfVisibleDaysCovered = differenceInDays(visibleBarEnd, visibleBarStart) + 1;
-                  const barWidth = (numberOfVisibleDaysCovered * dayCellWidth);
+                  let calculatedLeft: number;
+                  let calculatedWidth: number;
+                  const isSingleDayStay = numberOfNights === 0; // 0 nights means arrival and departure on the same day
+
+                  if (isSingleDayStay) {
+                    // For single-day stays, center the bar within the cell and give it half the cell's width
+                    calculatedLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 4); // Start at 1/4 of the cell
+                    calculatedWidth = dayCellWidth / 2; // Span half the cell
+                  } else {
+                    // For multi-day stays, start at the center of the first day and end at the center of the last day
+                    calculatedLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 2);
+                    // Width spans from center of startIndex to center of endIndex
+                    calculatedWidth = (endIndex - startIndex) * dayCellWidth;
+                  }
 
                   const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
 
                   const isArrivalDayVisible = isSameDay(checkIn, visibleBarStart);
                   const isDepartureDayVisible = isSameDay(checkOut, visibleBarEnd);
-                  const isSingleDayStay = numberOfNights === 0;
-
+                  
                   const barClasses = cn(
                     `absolute h-9 flex items-center justify-center text-xs font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm cursor-pointer hover:opacity-90 transition-opacity`,
                     {
@@ -270,8 +277,8 @@ const BookingPlanningGrid: React.FC = () => {
                           className={barClasses}
                           style={{
                             gridRow: '3', // Always on the third row (after two header rows)
-                            left: `${barLeft}px`,
-                            width: `${barWidth}px`,
+                            left: `${calculatedLeft}px`,
+                            width: `${calculatedWidth}px`,
                             height: '36px', // Adjusted for better vertical centering
                             marginTop: '2px', // Small margin from the top of the grid row
                             marginBottom: '2px', // Small margin from the bottom of the grid row
