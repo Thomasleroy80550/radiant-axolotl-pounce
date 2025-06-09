@@ -50,11 +50,11 @@
 
     --sidebar-ring: 217.2 91.2% 59.8%;
 
-    /* Custom calendar colors - REMOVED AS NO LONGER USED BY DayPicker */
-    /* --calendar-arrival-line: 142.1 76.2% 36.3%; */
-    /* --calendar-departure-line: 0 84.2% 60.2%; */
-    /* --calendar-reserved-bg: 217.2 91.2% 85%; */
-    /* --calendar-reserved-fg: 222.2 47.4% 11.2%; */
+    /* Custom calendar colors */
+    --calendar-arrival-line: 142.1 76.2% 36.3%; /* Green */
+    --calendar-departure-line: 0 84.2% 60.2%; /* Red */
+    --calendar-reserved-bg: 217.2 91.2% 85%; /* Light Blue */
+    --calendar-reserved-fg: 222.2 47.4% 11.2%; /* Dark text */
   }
 
   .dark {
@@ -94,11 +94,11 @@
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
 
-    /* Custom calendar colors for dark mode - REMOVED AS NO LONGER USED BY DayPicker */
-    /* --calendar-arrival-line: 142.1 76.2% 36.3%; */
-    /* --calendar-departure-line: 0 62.8% 30.6%; */
-    /* --calendar-reserved-bg: 217.2 32.6% 25%; */
-    /* --calendar-reserved-fg: 210 40% 98%; */
+    /* Custom calendar colors for dark mode */
+    --calendar-arrival-line: 142.1 76.2% 36.3%; /* Green */
+    --calendar-departure-line: 0 62.8% 30.6%; /* Red */
+    --calendar-reserved-bg: 217.2 32.6% 25%; /* Darker Blue */
+    --calendar-reserved-fg: 210 40% 98%; /* Light text */
   }
 }
 
@@ -148,8 +148,8 @@
 
 /* Specific styles for reservation bars are applied inline via React component */
 
-/* REMOVED DayPicker specific styles */
-/* .rdp-day_arrival {
+/* DayPicker specific styles for reservation highlights */
+.rdp-day_arrival {
   background-color: transparent !important;
   color: inherit !important;
   background-image: linear-gradient(to bottom right, transparent 48%, hsl(var(--calendar-arrival-line)) 48%, hsl(var(--calendar-arrival-line)) 52%, transparent 52%) !important;
@@ -185,7 +185,17 @@
   background-color: hsl(var(--calendar-reserved-bg) / 0.9) !important;
 }
 
-.rdp-day_selected:not(.rdp-day_arrival):not(.rdp-day_departure):not(.rdp-day_reserved-middle) {
+.rdp-day_single { /* Style for single-day bookings */
+  background-color: hsl(var(--calendar-arrival-line)) !important; /* Use arrival color for single day */
+  color: hsl(var(--primary-foreground)) !important;
+  border-radius: 0.25rem;
+}
+
+.rdp-day_single:hover {
+  background-color: hsl(var(--calendar-arrival-line) / 0.9) !important;
+}
+
+.rdp-day_selected:not(.rdp-day_arrival):not(.rdp-day_departure):not(.rdp-day_reserved-middle):not(.rdp-day_single) {
   background-color: hsl(var(--primary)) !important;
   color: hsl(var(--primary-foreground)) !important;
-} */
+}

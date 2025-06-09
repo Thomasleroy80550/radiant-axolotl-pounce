@@ -2,17 +2,15 @@ import React, { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import BookingPlanningGrid from '@/components/BookingPlanningGrid';
-import { useIsMobile } from '@/hooks/use-mobile'; // Keep import for potential future use or other mobile-specific UI if needed
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addDays, differenceInDays } from 'date-fns';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { format, parseISO, isWithinInterval, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addDays, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Home, CalendarDays, User, DollarSign } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal } from 'lucide-react';
+import { Terminal, Home, CalendarDays, DollarSign } from 'lucide-react';
 import { fetchKrossbookingReservations } from '@/lib/krossbooking';
-import { Calendar } from '@/components/ui/calendar'; // Keep import for potential future use or if other parts rely on it
+import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
-import CustomCalendarDay from '@/components/CustomCalendarDay'; // Keep import for potential future use
+import CustomCalendarDay from '@/components/CustomCalendarDay'; // Ensure this is imported
 
 interface KrossbookingReservation {
   id: string;
@@ -41,11 +39,12 @@ const channelColors: { [key: string]: { name: string; bgColor: string; textColor
 };
 
 const CalendarPage: React.FC = () => {
-  // useIsMobile is still available if you need to conditionally render other elements
-  // const isMobile = useIsMobile(); 
+  const isMobile = useIsMobile(); 
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [currentMonth, setCurrentMonth] = useState(new Date()); // For the mobile calendar's month navigation
 
   useEffect(() => {
     const loadReservations = async () => {
@@ -67,9 +66,88 @@ const CalendarPage: React.FC = () => {
     loadReservations();
   }, []);
 
-  // The dayReservationSegments and filteredReservations useMemos are no longer needed here
-  // as BookingPlanningGrid will handle its own filtering based on its internal state.
-  // The detailed reservation list below the grid/calendar will also be handled by BookingPlanningGrid.
+  // Memoized calculation of reservation segments for CustomCalendarDay
+  const dayReservationSegments = useMemo(() => {
+    const map = new Map<string, { type: 'arrival' | 'departure' | 'middle' | 'single', channel: string }[]>();
+    reservations.forEach(res => {
+      const checkIn = parseISO(res.check_in_date);
+      const checkOut = parseISO(res.check_out_date); // This is the day *after* the last night
+
+      const numberOfNights = differenceInDays(checkOut, checkIn);
+
+      if (numberOfNights <= 0) { 
+        return; // Skip invalid reservations (e.g., check-out before or on check-in)
+      }
+
+      if (numberOfNights === 1) { // Single night stay
+        const dayKey = format(checkIn, 'yyyy-MM-dd');
+        const segmentsForDay = map.get(dayKey) || [];
+        segmentsForDay.push({
+          type: 'single', // New type for single-day bookings
+          channel: res.channel_identifier || 'UNKNOWN',
+        });
+        map.set(dayKey, segmentsForDay);
+      } else { // Multi-night stay
+        eachDayOfInterval({ start: checkIn, end: addDays(checkOut, -1) }).forEach(day => {
+          const dayKey = format(day, 'yyyy-MM-dd');
+          let type: 'arrival' | 'departure' | 'middle' | 'single';
+          if (isSameDay(day, checkIn)) {
+            type = 'arrival';
+          } else if (isSameDay(day, addDays(checkOut, -1))) { // Last night of the stay
+            type = 'departure';
+          } else {
+            type = 'middle';
+          }
+
+          const segmentsForDay = map.get(dayKey) || [];
+          segmentsForDay.push({
+            type: type,
+            channel: res.channel_identifier || 'UNKNOWN',
+          });
+          map.set(dayKey, segmentsForDay);
+        });
+      }
+    });
+    return map;
+  }, [reservations]);
+
+  // Filtered reservations for the list below the calendar (mobile view)
+  const filteredReservationsForList = useMemo(() => {
+    if (!selectedDate) {
+      // If no specific date is selected, show reservations for the current month
+      const monthStart = startOfMonth(currentMonth);
+      const monthEnd = endOfMonth(currentMonth);
+      return reservations.filter(res => {
+        const checkIn = parseISO(res.check_in_date);
+        const checkOut = parseISO(res.check_out_date);
+        return (checkIn <= monthEnd && checkOut >= monthStart);
+      }).sort((a, b) => parseISO(a.check_in_date).getTime() - parseISO(b.check_in_date).getTime());
+    } else {
+      // Show reservations for the selected date
+      return reservations.filter(res => {
+        const checkIn = parseISO(res.check_in_date);
+        const checkOut = parseISO(res.check_out_date);
+        // A reservation is relevant if the selected date is between check-in (inclusive) and check-out (exclusive)
+        return isSameDay(selectedDate, checkIn) || (selectedDate > checkIn && selectedDate < checkOut);
+      }).sort((a, b) => parseISO(a.check_in_date).getTime() - parseISO(b.check_in_date).getTime());
+    }
+  }, [reservations, selectedDate, currentMonth]);
+
+  const getStatusVariant = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'confirmed':
+      case 'confirmée':
+        return 'default';
+      case 'pending':
+      case 'en attente':
+        return 'secondary';
+      case 'cancelled':
+      case 'annulée':
+        return 'destructive';
+      default:
+        return 'outline';
+    }
+  };
 
   return (
     <MainLayout>
@@ -87,10 +165,77 @@ const CalendarPage: React.FC = () => {
 
         {!loading && !error && (
           <>
-            {/* Always render BookingPlanningGrid */}
-            <BookingPlanningGrid />
+            {isMobile ? (
+              <>
+                <Card className="shadow-md mb-6">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold">Sélectionner une date</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex justify-center">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                      month={currentMonth}
+                      onMonthChange={setCurrentMonth}
+                      locale={fr}
+                      className="rounded-md border"
+                      numberOfMonths={12} // Display 12 months for mobile
+                      components={{
+                        Day: (props) => (
+                          <CustomCalendarDay
+                            {...props}
+                            dayReservationSegments={dayReservationSegments}
+                            channelColors={channelColors}
+                            displayMonth={currentMonth} // Pass currentMonth to CustomCalendarDay
+                          />
+                        ),
+                      }}
+                    />
+                  </CardContent>
+                </Card>
 
-            {/* You can keep the 'Événements à venir' card here as it's generic */}
+                <Card className="shadow-md mt-6">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold">
+                      Réservations pour {selectedDate ? format(selectedDate, 'dd MMMM yyyy', { locale: fr }) : 'le mois en cours'}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {filteredReservationsForList.length === 0 ? (
+                      <p className="text-gray-500">Aucune réservation trouvée pour cette période.</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {filteredReservationsForList.map((booking) => {
+                          const channelInfo = channelColors[booking.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
+                          return (
+                            <Card key={booking.id} className="shadow-sm border border-gray-200 dark:border-gray-700 relative overflow-hidden">
+                              <div className={`absolute left-0 top-0 bottom-0 w-2 ${channelInfo.bgColor}`}></div>
+                              <CardContent className="p-4 pl-6">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center">
+                                    <h3 className="font-bold text-md">{booking.guest_name}</h3>
+                                  </div>
+                                  <Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge>
+                                </div>
+                                <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                                  <p className="flex items-center"><Home className="h-4 w-4 mr-2" /> {booking.property_name}</p>
+                                  <p className="flex items-center"><CalendarDays className="h-4 w-4 mr-2" /> Du {format(parseISO(booking.check_in_date), 'dd/MM', { locale: fr })} au {format(parseISO(booking.check_out_date), 'dd/MM', { locale: fr })}</p>
+                                  <p className="flex items-center"><DollarSign className="h-4 w-4 mr-2" /> {booking.amount} ({channelInfo.name})</p>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <BookingPlanningGrid />
+            )}
+
             <Card className="shadow-md mt-6">
               <CardHeader>
                 <CardTitle className="text-lg font-semibold">Événements à venir (Exemple)</CardTitle>

@@ -16,17 +16,20 @@ const CustomCalendarDay: React.FC<CustomCalendarDayProps> = ({ date, displayMont
 
   const isOutside = !format(date, 'yyyy-MM').includes(format(displayMonth, 'yyyy-MM'));
 
-  let channelBgColor = "";
-  let channelTextColor = "";
-  let isBooked = false;
-
+  let customClasses = '';
   if (segments && segments.length > 0) {
-    isBooked = true;
-    // For simplicity, take the first segment. If multiple reservations overlap, this will pick one.
-    const segment = segments[0]; 
-    const channelInfo = channelColors[segment.channel] || channelColors['UNKNOWN'];
-    channelBgColor = channelInfo.bgColor;
-    channelTextColor = channelInfo.textColor;
+    // Prioritize single, then arrival, then departure, then middle for display if multiple overlap
+    const segment = segments.find(s => s.type === 'single') || 
+                     segments.find(s => s.type === 'arrival') || 
+                     segments.find(s => s.type === 'departure') || 
+                     segments[0]; // Fallback to first if no specific priority
+
+    if (segment) {
+      customClasses += ` rdp-day_${segment.type}`;
+      // If you want channel-specific colors on the calendar day itself, you'd add them here
+      // const channelInfo = channelColors[segment.channel] || channelColors['UNKNOWN'];
+      // customClasses += ` ${channelInfo.bgColor} ${channelInfo.textColor}`;
+    }
   }
 
   return (
@@ -42,9 +45,9 @@ const CustomCalendarDay: React.FC<CustomCalendarDayProps> = ({ date, displayMont
           "data-[outside]:text-muted-foreground data-[outside]:data-[selected]:bg-accent/50 data-[outside]:data-[selected]:text-muted-foreground data-[outside]:data-[selected]:hover:bg-accent/50 data-[outside]:data-[selected]:hover:text-muted-foreground",
           "data-[unavailable]:text-muted-foreground data-[unavailable]:opacity-50 data-[unavailable]:cursor-not-allowed",
           
-          // Apply custom booked styles
-          isBooked ? `${channelBgColor} ${channelTextColor}` : "hover:bg-accent hover:text-accent-foreground",
-          isBooked && isOutside ? "opacity-50" : "", // Dim booked days outside current month
+          // Apply custom reservation styles from globals.css via customClasses
+          customClasses,
+          isOutside && segments && segments.length > 0 ? "opacity-50" : "", // Dim booked days outside current month
           "transition-colors duration-100 ease-in-out" // Smooth transition for hover/selection
         )}
       >
