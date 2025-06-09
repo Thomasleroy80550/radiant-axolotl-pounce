@@ -143,9 +143,8 @@ const CalendarPage: React.FC = () => {
                     modifiers={{ booked: bookedDays }}
                     modifiersStyles={{
                       booked: {
-                        backgroundColor: 'hsl(var(--primary) / 0.1)', // Light background using primary color
-                        border: '1px solid hsl(var(--primary))', // Border using primary color
-                        color: 'hsl(var(--foreground))', // Keep foreground text color
+                        backgroundColor: 'hsl(var(--primary))', // Use primary color for booked days
+                        color: 'hsl(var(--primary-foreground))', // Ensure text is readable
                         borderRadius: '0.25rem', // Keep rounded corners for the day cell
                       },
                     }}
@@ -169,7 +168,6 @@ const CalendarPage: React.FC = () => {
                               <CardContent className="p-4 pl-6"> {/* Adjust padding to account for the bar */}
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center">
-                                    {/* Removed the small rounded-full span here as the left bar will serve this purpose */}
                                     <h3 className="font-bold text-md">{booking.guest_name}</h3>
                                   </div>
                                   <Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge>
