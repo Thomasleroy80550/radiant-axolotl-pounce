@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { fetchKrossbookingReservations } from '@/lib/krossbooking';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isWithinInterval, startOfYear, endOfYear } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 interface Booking {
@@ -34,10 +34,27 @@ const BookingsPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        // Fetch reservations for the specific room ID
         const fetchedBookings = await fetchKrossbookingReservations(targetRoomId);
-        setBookings(fetchedBookings);
         console.log(`Fetched bookings for BookingsPage (Room ${targetRoomId}):`, fetchedBookings);
+
+        const currentYear = new Date().getFullYear();
+        const yearStart = startOfYear(new Date(currentYear, 0, 1));
+        const yearEnd = endOfYear(new Date(currentYear, 0, 1));
+
+        // Filter bookings for the current year
+        const filteredBookings = fetchedBookings.filter(booking => {
+          const checkInDate = parseISO(booking.check_in_date);
+          return isWithinInterval(checkInDate, { start: yearStart, end: yearEnd });
+        });
+
+        // Sort bookings by check-in date
+        const sortedBookings = filteredBookings.sort((a, b) => {
+          const dateA = parseISO(a.check_in_date).getTime();
+          const dateB = parseISO(b.check_in_date).getTime();
+          return dateA - dateB;
+        });
+
+        setBookings(sortedBookings);
       } catch (err: any) {
         setError(`Erreur lors du chargement des réservations pour la chambre ${targetRoomName} : ${err.message}`);
         console.error("Error in loadBookings for BookingsPage:", err);
@@ -65,10 +82,12 @@ const BookingsPage: React.FC = () => {
     }
   };
 
+  const currentYear = new Date().getFullYear();
+
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
-        <h1 className="text-3xl font-bold mb-6">Réservations pour {targetRoomName}</h1>
+        <h1 className="text-3xl font-bold mb-6">Réservations pour {targetRoomName} ({currentYear})</h1>
         <Card className="shadow-md">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Liste de vos réservations</CardTitle>
@@ -83,7 +102,7 @@ const BookingsPage: React.FC = () => {
               </Alert>
             )}
             {!loading && !error && bookings.length === 0 && (
-              <p className="text-gray-500">Aucune réservation trouvée pour la chambre {targetRoomName}.</p>
+              <p className="text-gray-500">Aucune réservation trouvée pour la chambre {targetRoomName} en {currentYear}.</p>
             )}
             {!loading && !error && bookings.length > 0 && (
               <div className="overflow-x-auto">
