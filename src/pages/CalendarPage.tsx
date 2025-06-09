@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import BookingPlanningGrid from '@/components/BookingPlanningGrid';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile'; // Still useful for other mobile-specific UI if needed
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addDays, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -10,9 +10,9 @@ import { ChevronLeft, ChevronRight, Home, CalendarDays, User, DollarSign } from 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { fetchKrossbookingReservations } from '@/lib/krossbooking';
-import { Calendar } from '@/components/ui/calendar';
+import { Calendar } from '@/components/ui/calendar'; // Keep import for potential future use or if other parts rely on it
 import { Badge } from '@/components/ui/badge';
-import CustomCalendarDay from '@/components/CustomCalendarDay'; // Import the new component
+import CustomCalendarDay from '@/components/CustomCalendarDay'; // Keep import for potential future use
 
 interface KrossbookingReservation {
   id: string;
@@ -41,7 +41,8 @@ const channelColors: { [key: string]: { name: string; bgColor: string; textColor
 };
 
 const CalendarPage: React.FC = () => {
-  const isMobile = useIsMobile();
+  // useIsMobile is still available if you need to conditionally render other elements
+  // const isMobile = useIsMobile(); 
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
@@ -68,6 +69,8 @@ const CalendarPage: React.FC = () => {
     loadReservations();
   }, []);
 
+  // This useMemo is no longer strictly needed for CustomCalendarDay, but kept for reference
+  // or if you decide to re-introduce a different calendar view later.
   const dayReservationSegments = useMemo(() => {
     const map = new Map<string, { type: 'arrival' | 'departure' | 'middle' | 'single', channel: string }[]>();
     reservations.forEach(res => {
@@ -163,68 +166,46 @@ const CalendarPage: React.FC = () => {
 
         {!loading && !error && (
           <>
-            {isMobile ? (
-              <Card className="shadow-md mb-6">
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold">Vue Calendrier</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    initialFocus
-                    className="rounded-md border"
-                    month={currentMonth}
-                    onMonthChange={setCurrentMonth}
-                    components={{
-                      Day: (props) => (
-                        <CustomCalendarDay
-                          {...props}
-                          displayMonth={currentMonth}
-                          dayReservationSegments={dayReservationSegments}
-                          channelColors={channelColors}
-                        />
-                      ),
-                    }}
-                  />
-                  <div className="mt-6 w-full">
-                    <h3 className="text-xl font-semibold mb-4">
-                      Réservations pour {selectedDate ? format(selectedDate, 'dd MMMM yyyy', { locale: fr }) : 'le mois en cours'}
-                    </h3>
-                    {filteredReservations.length === 0 ? (
-                      <p className="text-gray-500">Aucune réservation trouvée pour cette période.</p>
-                    ) : (
-                      <div className="space-y-4">
-                        {filteredReservations.map((booking) => {
-                          const channelInfo = channelColors[booking.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
-                          return (
-                            <Card key={booking.id} className="shadow-sm border border-gray-200 dark:border-gray-700 relative overflow-hidden">
-                              <div className={`absolute left-0 top-0 bottom-0 w-2 ${channelInfo.bgColor}`}></div> {/* Colored bar on the left */}
-                              <CardContent className="p-4 pl-6"> {/* Adjust padding to account for the bar */}
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center">
-                                    <h3 className="font-bold text-md">{booking.guest_name}</h3>
-                                  </div>
-                                  <Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge>
-                                </div>
-                                <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                                  <p className="flex items-center"><Home className="h-4 w-4 mr-2" /> {booking.property_name}</p>
-                                  <p className="flex items-center"><CalendarDays className="h-4 w-4 mr-2" /> Du {format(parseISO(booking.check_in_date), 'dd/MM', { locale: fr })} au {format(parseISO(booking.check_out_date), 'dd/MM', { locale: fr })}</p>
-                                  <p className="flex items-center"><DollarSign className="h-4 w-4 mr-2" /> {booking.amount} ({channelInfo.name})</p>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                      </div>
-                    )}
+            {/* Always render BookingPlanningGrid */}
+            <BookingPlanningGrid />
+
+            {/* You can keep the detailed reservation list below the grid if desired */}
+            <Card className="shadow-md mt-6">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">
+                  Réservations pour {selectedDate ? format(selectedDate, 'dd MMMM yyyy', { locale: fr }) : 'le mois en cours'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {filteredReservations.length === 0 ? (
+                  <p className="text-gray-500">Aucune réservation trouvée pour cette période.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {filteredReservations.map((booking) => {
+                      const channelInfo = channelColors[booking.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
+                      return (
+                        <Card key={booking.id} className="shadow-sm border border-gray-200 dark:border-gray-700 relative overflow-hidden">
+                          <div className={`absolute left-0 top-0 bottom-0 w-2 ${channelInfo.bgColor}`}></div> {/* Colored bar on the left */}
+                          <CardContent className="p-4 pl-6"> {/* Adjust padding to account for the bar */}
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center">
+                                <h3 className="font-bold text-md">{booking.guest_name}</h3>
+                              </div>
+                              <Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge>
+                            </div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                              <p className="flex items-center"><Home className="h-4 w-4 mr-2" /> {booking.property_name}</p>
+                              <p className="flex items-center"><CalendarDays className="h-4 w-4 mr-2" /> Du {format(parseISO(booking.check_in_date), 'dd/MM', { locale: fr })} au {format(parseISO(booking.check_out_date), 'dd/MM', { locale: fr })}</p>
+                              <p className="flex items-center"><DollarSign className="h-4 w-4 mr-2" /> {booking.amount} ({channelInfo.name})</p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <BookingPlanningGrid />
-            )}
+                )}
+              </CardContent>
+            </Card>
           </>
         )}
         
