@@ -5,8 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { fetchKrossbookingReservations } from '@/lib/krossbooking';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, CalendarDays, DollarSign, User, Home, Tag, Filter, XCircle } from 'lucide-react'; // Added Filter and XCircle icons
-import { format, parseISO, isWithinInterval, startOfYear, endOfYear, isAfter, isBefore, subDays, addDays } from 'date-fns'; // Added isAfter, isBefore, subDays, addDays
+import { Terminal, CalendarDays, DollarSign, User, Home, Tag, Filter, XCircle } from 'lucide-react';
+import { format, parseISO, isWithinInterval, startOfYear, endOfYear, isAfter, isBefore, subDays, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -19,9 +19,9 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Import Select components
-import { Input } from '@/components/ui/input'; // Import Input
-import { Button } from '@/components/ui/button'; // Import Button
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 interface Booking {
   id: string;
@@ -35,8 +35,8 @@ interface Booking {
 }
 
 const BookingsPage: React.FC = () => {
-  const [allBookings, setAllBookings] = useState<Booking[]>([]); // Store all fetched bookings
-  const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]); // Store currently displayed bookings
+  const [allBookings, setAllBookings] = useState<Booking[]>([]);
+  const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
@@ -45,28 +45,28 @@ const BookingsPage: React.FC = () => {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
-  // Filter states
-  const [filterRoomId, setFilterRoomId] = useState<string>('');
-  const [filterStatus, setFilterStatus] = useState<string>('');
-  const [filterChannel, setFilterChannel] = useState<string>('');
-  const [filterStartDate, setFilterStartDate] = useState<string>(''); // YYYY-MM-DD
-  const [filterEndDate, setFilterEndDate] = useState<string>(''); // YYYY-MM-DD
+  // Filter states - Initialized to 'all' instead of ''
+  const [filterRoomId, setFilterRoomId] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterChannel, setFilterChannel] = useState<string>('all');
+  const [filterStartDate, setFilterStartDate] = useState<string>('');
+  const [filterEndDate, setFilterEndDate] = useState<string>('');
 
-  const commonStatuses = ['CONFIRMED', 'PENDING', 'CANCELLED']; // Krossbooking statuses
+  const commonStatuses = ['CONFIRMED', 'PENDING', 'CANCELLED'];
   const commonChannels = ['AIRBNB', 'BOOKING', 'ABRITEL', 'DIRECT', 'HELLOKEYS', 'UNKNOWN'];
 
   const applyFilters = (bookingsToFilter: Booking[]) => {
     let tempBookings = bookingsToFilter;
 
-    if (filterRoomId) {
+    if (filterRoomId !== 'all') { // Check for 'all'
       tempBookings = tempBookings.filter(booking => booking.property_name === userRooms.find(r => r.room_id === filterRoomId)?.room_name || booking.property_name === filterRoomId);
     }
 
-    if (filterStatus) {
+    if (filterStatus !== 'all') { // Check for 'all'
       tempBookings = tempBookings.filter(booking => booking.status.toLowerCase() === filterStatus.toLowerCase());
     }
 
-    if (filterChannel) {
+    if (filterChannel !== 'all') { // Check for 'all'
       tempBookings = tempBookings.filter(booking => (booking.cod_channel || 'UNKNOWN').toLowerCase() === filterChannel.toLowerCase());
     }
 
@@ -74,15 +74,15 @@ const BookingsPage: React.FC = () => {
       const start = parseISO(filterStartDate);
       tempBookings = tempBookings.filter(booking => {
         const checkIn = parseISO(booking.check_in_date);
-        return isAfter(checkIn, subDays(start, 1)); // Check-in on or after start date
+        return isAfter(checkIn, subDays(start, 1));
       });
     }
 
     if (filterEndDate) {
       const end = parseISO(filterEndDate);
       tempBookings = tempBookings.filter(booking => {
-        const checkIn = parseISO(booking.check_in_date); // Filter by check-in date for consistency
-        return isBefore(checkIn, addDays(end, 1)); // Check-in on or before end date
+        const checkIn = parseISO(booking.check_in_date);
+        return isBefore(checkIn, addDays(end, 1));
       });
     }
 
@@ -113,21 +113,19 @@ const BookingsPage: React.FC = () => {
         const yearStart = startOfYear(new Date(currentYear, 0, 1));
         const yearEnd = endOfYear(new Date(currentYear, 0, 1));
 
-        // Filter bookings for the current year initially
         const bookingsForCurrentYear = fetchedBookings.filter(booking => {
           const checkInDate = parseISO(booking.check_in_date);
           return isWithinInterval(checkInDate, { start: yearStart, end: yearEnd });
         });
 
-        // Sort bookings by check-in date
         const sortedBookings = bookingsForCurrentYear.sort((a, b) => {
           const dateA = parseISO(a.check_in_date).getTime();
           const dateB = parseISO(b.check_in_date).getTime();
           return dateA - dateB;
         });
 
-        setAllBookings(sortedBookings); // Store all year's bookings
-        applyFilters(sortedBookings); // Apply filters to initial data
+        setAllBookings(sortedBookings);
+        applyFilters(sortedBookings);
       } catch (err: any) {
         setError(`Erreur lors du chargement des réservations : ${err.message}`);
         console.error("Error in loadBookings for BookingsPage:", err);
@@ -137,9 +135,8 @@ const BookingsPage: React.FC = () => {
     };
 
     loadBookings();
-  }, []); // Run once on mount to fetch all bookings
+  }, []);
 
-  // Re-apply filters whenever filter states change
   useEffect(() => {
     applyFilters(allBookings);
   }, [filterRoomId, filterStatus, filterChannel, filterStartDate, filterEndDate, allBookings]);
@@ -168,9 +165,9 @@ const BookingsPage: React.FC = () => {
   };
 
   const handleResetFilters = () => {
-    setFilterRoomId('');
-    setFilterStatus('');
-    setFilterChannel('');
+    setFilterRoomId('all'); // Reset to 'all'
+    setFilterStatus('all'); // Reset to 'all'
+    setFilterChannel('all'); // Reset to 'all'
     setFilterStartDate('');
     setFilterEndDate('');
   };
@@ -182,7 +179,6 @@ const BookingsPage: React.FC = () => {
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Réservations pour {userRooms.length > 0 ? 'vos chambres' : 'les chambres'} ({currentYear})</h1>
         
-        {/* Filter Section */}
         <Card className="shadow-md mb-6">
           <CardHeader>
             <CardTitle className="text-lg font-semibold flex items-center">
@@ -198,7 +194,7 @@ const BookingsPage: React.FC = () => {
                   <SelectValue placeholder="Toutes les chambres" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Toutes les chambres</SelectItem>
+                  <SelectItem value="all">Toutes les chambres</SelectItem> {/* Changed value to 'all' */}
                   {userRooms.map(room => (
                     <SelectItem key={room.id} value={room.room_id}>{room.room_name}</SelectItem>
                   ))}
@@ -213,7 +209,7 @@ const BookingsPage: React.FC = () => {
                   <SelectValue placeholder="Tous les statuts" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tous les statuts</SelectItem>
+                  <SelectItem value="all">Tous les statuts</SelectItem> {/* Changed value to 'all' */}
                   {commonStatuses.map(status => (
                     <SelectItem key={status} value={status}>{status}</SelectItem>
                   ))}
@@ -228,7 +224,7 @@ const BookingsPage: React.FC = () => {
                   <SelectValue placeholder="Tous les canaux" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tous les canaux</SelectItem>
+                  <SelectItem value="all">Tous les canaux</SelectItem> {/* Changed value to 'all' */}
                   {commonChannels.map(channel => (
                     <SelectItem key={channel} value={channel}>{channel}</SelectItem>
                   ))}
@@ -374,12 +370,11 @@ const BookingsPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Booking Details Dialog */}
       <Dialog open={isDetailDialogOpen} onOpenChange={(open) => {
         console.log("Dialog onOpenChange called:", open);
         setIsDetailDialogOpen(open);
         if (!open) {
-          setSelectedBooking(null); // Clear selected booking when dialog closes
+          setSelectedBooking(null);
         }
       }}>
         <DialogContent className="sm:max-w-[425px]">
