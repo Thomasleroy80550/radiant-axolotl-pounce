@@ -10,6 +10,7 @@ import { fetchKrossbookingReservations, fetchKrossbookingHousekeepingTasks, Kros
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api'; // Import user room API
+import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile hook
 
 interface KrossbookingReservation {
   id: string;
@@ -40,6 +41,7 @@ const BookingPlanningGrid: React.FC = () => {
   const [housekeepingTasks, setHousekeepingTasks] = useState<KrossbookingHousekeepingTask[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const isMobile = useIsMobile(); // Use the hook to detect mobile
 
   useEffect(() => {
     const loadData = async () => {
@@ -96,8 +98,9 @@ const BookingPlanningGrid: React.FC = () => {
     setCurrentMonth(addMonths(currentMonth, 1));
   };
 
-  const dayCellWidth = 80;
-  const propertyColumnWidth = 150;
+  // Adjust widths based on mobile status
+  const dayCellWidth = isMobile ? 40 : 80; // Smaller cells on mobile
+  const propertyColumnWidth = isMobile ? 100 : 150; // Smaller property column on mobile
 
   const getTaskIcon = (status: string) => {
     switch (status.toLowerCase()) {
@@ -278,7 +281,8 @@ const BookingPlanningGrid: React.FC = () => {
                     const isDepartureDayVisible = isSameDay(checkOut, visibleBarEnd);
                     
                     const barClasses = cn(
-                      `absolute h-9 flex items-center justify-center text-xs font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm cursor-pointer hover:opacity-90 transition-opacity`,
+                      `absolute h-9 flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm cursor-pointer hover:opacity-90 transition-opacity`,
+                      isMobile ? 'text-[0.6rem] px-0.5' : 'text-xs px-1', // Smaller text and padding on mobile
                       {
                         'rounded-full': isSingleDayStay, // Full round for single day
                         'rounded-l-full': isArrivalDayVisible && !isSingleDayStay, // Left round for multi-day arrival
@@ -303,14 +307,13 @@ const BookingPlanningGrid: React.FC = () => {
                               display: 'flex', // Ensure flexbox for icon positioning
                               justifyContent: 'space-between', // Distribute items
                               alignItems: 'center',
-                              padding: '0 4px', // Small padding to keep icons from edge
                             }}
                           >
                             {/* Render LogIn icon at the start of the bar if it's the check-in day */}
-                            {isArrivalDayVisible && !isSingleDayStay && <LogIn className="h-4 w-4 flex-shrink-0" />}
+                            {isArrivalDayVisible && !isSingleDayStay && <LogIn className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}
                             
                             {/* Render Sparkles icon for single-day reservations (arrival and departure on same day) */}
-                            {isSingleDayStay && <Sparkles className="h-4 w-4 flex-shrink-0" />}
+                            {isSingleDayStay && <Sparkles className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}
 
                             <span className="flex-grow text-center px-1 truncate">
                               <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
@@ -320,7 +323,7 @@ const BookingPlanningGrid: React.FC = () => {
                             </span>
 
                             {/* Render LogOut icon at the end of the bar if it's the check-out day (or same day for 0 nights) */}
-                            {isDepartureDayVisible && !isSingleDayStay && <LogOut className="h-4 w-4 flex-shrink-0" />}
+                            {isDepartureDayVisible && !isSingleDayStay && <LogOut className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}
                           </div>
                         </TooltipTrigger>
                         <TooltipContent className="p-2 text-sm">
