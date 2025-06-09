@@ -5,10 +5,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { fetchKrossbookingReservations } from '@/lib/krossbooking';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal } from 'lucide-react';
+import { Terminal, CalendarDays, DollarSign, User, Home, Tag } from 'lucide-react'; // Added icons for mobile cards
 import { format, parseISO, isWithinInterval, startOfYear, endOfYear } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api'; // Import user room API
+import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile hook
+import { cn } from '@/lib/utils'; // Import cn for conditional styling
 
 interface Booking {
   id: string;
@@ -26,6 +28,7 @@ const BookingsPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
+  const isMobile = useIsMobile(); // Use the hook to detect mobile
 
   useEffect(() => {
     const loadBookings = async () => {
@@ -119,40 +122,89 @@ const BookingsPage: React.FC = () => {
               <p className="text-gray-500">Aucune réservation trouvée pour vos chambres en {currentYear}.</p>
             )}
             {!loading && !error && bookings.length > 0 && (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID Réservation</TableHead>
-                      <TableHead>Client</TableHead>
-                      <TableHead>Propriété</TableHead>
-                      <TableHead>Canal</TableHead>
-                      <TableHead>Arrivée</TableHead>
-                      <TableHead>Départ</TableHead>
-                      <TableHead>Statut</TableHead>
-                      <TableHead className="text-right">Montant</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+              <>
+                {/* Desktop Table View */}
+                {!isMobile && (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>ID Réservation</TableHead>
+                          <TableHead>Client</TableHead>
+                          <TableHead>Propriété</TableHead>
+                          <TableHead>Canal</TableHead>
+                          <TableHead>Arrivée</TableHead>
+                          <TableHead>Départ</TableHead>
+                          <TableHead>Statut</TableHead>
+                          <TableHead className="text-right">Montant</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {bookings.map((booking) => (
+                          <TableRow key={booking.id}>
+                            <TableCell className="font-medium">{booking.id}</TableCell>
+                            <TableCell>{booking.guest_name}</TableCell>
+                            <TableCell>{booking.property_name}</TableCell>
+                            <TableCell>{booking.cod_channel || 'N/A'}</TableCell>
+                            <TableCell>{format(parseISO(booking.check_in_date), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                            <TableCell>{format(parseISO(booking.check_out_date), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                            <TableCell>
+                              <Badge variant={getStatusVariant(booking.status)}>
+                                {booking.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className={`text-right font-bold ${booking.type === 'Revenu' ? 'text-green-600' : 'text-red-600'}`}>
+                              {booking.amount}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                {/* Mobile Card View */}
+                {isMobile && (
+                  <div className="grid grid-cols-1 gap-4">
                     {bookings.map((booking) => (
-                      <TableRow key={booking.id}>
-                        <TableCell className="font-medium">{booking.id}</TableCell>
-                        <TableCell>{booking.guest_name}</TableCell>
-                        <TableCell>{booking.property_name}</TableCell>
-                        <TableCell>{booking.cod_channel || 'N/A'}</TableCell>
-                        <TableCell>{format(parseISO(booking.check_in_date), 'dd/MM/yyyy', { locale: fr })}</TableCell>
-                        <TableCell>{format(parseISO(booking.check_out_date), 'dd/MM/yyyy', { locale: fr })}</TableCell>
-                        <TableCell>
-                          <Badge variant={getStatusVariant(booking.status)}>
-                            {booking.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">{booking.amount}</TableCell>
-                      </TableRow>
+                      <Card key={booking.id} className="shadow-sm">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base font-semibold flex items-center">
+                            <Tag className="h-4 w-4 mr-2 text-gray-500" />
+                            Réservation #{booking.id}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="text-sm space-y-1">
+                          <p className="flex items-center">
+                            <User className="h-4 w-4 mr-2 text-gray-500" />
+                            <span className="font-medium">{booking.guest_name}</span>
+                          </p>
+                          <p className="flex items-center">
+                            <Home className="h-4 w-4 mr-2 text-gray-500" />
+                            {booking.property_name}
+                          </p>
+                          <p className="flex items-center">
+                            <CalendarDays className="h-4 w-4 mr-2 text-gray-500" />
+                            {format(parseISO(booking.check_in_date), 'dd/MM/yyyy', { locale: fr })} - {format(parseISO(booking.check_out_date), 'dd/MM/yyyy', { locale: fr })}
+                          </p>
+                          <p className="flex items-center">
+                            <DollarSign className="h-4 w-4 mr-2 text-gray-500" />
+                            <span className={cn("font-bold", booking.status === 'confirmed' ? 'text-green-600' : 'text-gray-800 dark:text-gray-200')}>
+                              {booking.amount}
+                            </span>
+                          </p>
+                          <div className="flex items-center justify-between pt-2">
+                            <Badge variant={getStatusVariant(booking.status)}>
+                              {booking.status}
+                            </Badge>
+                            <span className="text-xs text-gray-500">Canal: {booking.cod_channel || 'N/A'}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
                     ))}
-                  </TableBody>
-                </Table>
-              </div>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
