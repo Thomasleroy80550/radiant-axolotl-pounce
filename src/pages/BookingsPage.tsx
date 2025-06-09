@@ -5,8 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { fetchKrossbookingReservations } from '@/lib/krossbooking';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, CalendarDays, DollarSign, User, Home, Tag } from 'lucide-react';
-import { format, parseISO, isWithinInterval, startOfYear, endOfYear } from 'date-fns';
+import { Terminal, CalendarDays, DollarSign, User, Home, Tag, Filter, XCircle } from 'lucide-react'; // Added Filter and XCircle icons
+import { format, parseISO, isWithinInterval, startOfYear, endOfYear, isAfter, isBefore, subDays, addDays } from 'date-fns'; // Added isAfter, isBefore, subDays, addDays
 import { fr } from 'date-fns/locale';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -18,7 +18,10 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label'; // Import Label for dialog content
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Import Select components
+import { Input } from '@/components/ui/input'; // Import Input
+import { Button } from '@/components/ui/button'; // Import Button
 
 interface Booking {
   id: string;
@@ -32,7 +35,8 @@ interface Booking {
 }
 
 const BookingsPage: React.FC = () => {
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [allBookings, setAllBookings] = useState<Booking[]>([]); // Store all fetched bookings
+  const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]); // Store currently displayed bookings
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
@@ -40,6 +44,50 @@ const BookingsPage: React.FC = () => {
 
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+
+  // Filter states
+  const [filterRoomId, setFilterRoomId] = useState<string>('');
+  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterChannel, setFilterChannel] = useState<string>('');
+  const [filterStartDate, setFilterStartDate] = useState<string>(''); // YYYY-MM-DD
+  const [filterEndDate, setFilterEndDate] = useState<string>(''); // YYYY-MM-DD
+
+  const commonStatuses = ['CONFIRMED', 'PENDING', 'CANCELLED']; // Krossbooking statuses
+  const commonChannels = ['AIRBNB', 'BOOKING', 'ABRITEL', 'DIRECT', 'HELLOKEYS', 'UNKNOWN'];
+
+  const applyFilters = (bookingsToFilter: Booking[]) => {
+    let tempBookings = bookingsToFilter;
+
+    if (filterRoomId) {
+      tempBookings = tempBookings.filter(booking => booking.property_name === userRooms.find(r => r.room_id === filterRoomId)?.room_name || booking.property_name === filterRoomId);
+    }
+
+    if (filterStatus) {
+      tempBookings = tempBookings.filter(booking => booking.status.toLowerCase() === filterStatus.toLowerCase());
+    }
+
+    if (filterChannel) {
+      tempBookings = tempBookings.filter(booking => (booking.cod_channel || 'UNKNOWN').toLowerCase() === filterChannel.toLowerCase());
+    }
+
+    if (filterStartDate) {
+      const start = parseISO(filterStartDate);
+      tempBookings = tempBookings.filter(booking => {
+        const checkIn = parseISO(booking.check_in_date);
+        return isAfter(checkIn, subDays(start, 1)); // Check-in on or after start date
+      });
+    }
+
+    if (filterEndDate) {
+      const end = parseISO(filterEndDate);
+      tempBookings = tempBookings.filter(booking => {
+        const checkIn = parseISO(booking.check_in_date); // Filter by check-in date for consistency
+        return isBefore(checkIn, addDays(end, 1)); // Check-in on or before end date
+      });
+    }
+
+    setFilteredBookings(tempBookings);
+  };
 
   useEffect(() => {
     const loadBookings = async () => {
@@ -52,7 +100,8 @@ const BookingsPage: React.FC = () => {
         const roomIds = fetchedUserRooms.map(room => room.room_id);
 
         if (roomIds.length === 0) {
-          setBookings([]);
+          setAllBookings([]);
+          setFilteredBookings([]);
           setLoading(false);
           return;
         }
@@ -64,20 +113,21 @@ const BookingsPage: React.FC = () => {
         const yearStart = startOfYear(new Date(currentYear, 0, 1));
         const yearEnd = endOfYear(new Date(currentYear, 0, 1));
 
-        // Filter bookings for the current year
-        const filteredBookings = fetchedBookings.filter(booking => {
+        // Filter bookings for the current year initially
+        const bookingsForCurrentYear = fetchedBookings.filter(booking => {
           const checkInDate = parseISO(booking.check_in_date);
           return isWithinInterval(checkInDate, { start: yearStart, end: yearEnd });
         });
 
         // Sort bookings by check-in date
-        const sortedBookings = filteredBookings.sort((a, b) => {
+        const sortedBookings = bookingsForCurrentYear.sort((a, b) => {
           const dateA = parseISO(a.check_in_date).getTime();
           const dateB = parseISO(b.check_in_date).getTime();
           return dateA - dateB;
         });
 
-        setBookings(sortedBookings);
+        setAllBookings(sortedBookings); // Store all year's bookings
+        applyFilters(sortedBookings); // Apply filters to initial data
       } catch (err: any) {
         setError(`Erreur lors du chargement des réservations : ${err.message}`);
         console.error("Error in loadBookings for BookingsPage:", err);
@@ -87,7 +137,12 @@ const BookingsPage: React.FC = () => {
     };
 
     loadBookings();
-  }, []);
+  }, []); // Run once on mount to fetch all bookings
+
+  // Re-apply filters whenever filter states change
+  useEffect(() => {
+    applyFilters(allBookings);
+  }, [filterRoomId, filterStatus, filterChannel, filterStartDate, filterEndDate, allBookings]);
 
   const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -112,12 +167,103 @@ const BookingsPage: React.FC = () => {
     console.log("isDetailDialogOpen after setting:", true);
   };
 
+  const handleResetFilters = () => {
+    setFilterRoomId('');
+    setFilterStatus('');
+    setFilterChannel('');
+    setFilterStartDate('');
+    setFilterEndDate('');
+  };
+
   const currentYear = new Date().getFullYear();
 
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Réservations pour {userRooms.length > 0 ? 'vos chambres' : 'les chambres'} ({currentYear})</h1>
+        
+        {/* Filter Section */}
+        <Card className="shadow-md mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold flex items-center">
+              <Filter className="h-5 w-5 mr-2" />
+              Filtres de Réservations
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="filterRoom">Chambre</Label>
+              <Select value={filterRoomId} onValueChange={setFilterRoomId}>
+                <SelectTrigger id="filterRoom">
+                  <SelectValue placeholder="Toutes les chambres" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Toutes les chambres</SelectItem>
+                  {userRooms.map(room => (
+                    <SelectItem key={room.id} value={room.room_id}>{room.room_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="filterStatus">Statut</Label>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger id="filterStatus">
+                  <SelectValue placeholder="Tous les statuts" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Tous les statuts</SelectItem>
+                  {commonStatuses.map(status => (
+                    <SelectItem key={status} value={status}>{status}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="filterChannel">Canal</Label>
+              <Select value={filterChannel} onValueChange={setFilterChannel}>
+                <SelectTrigger id="filterChannel">
+                  <SelectValue placeholder="Tous les canaux" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Tous les canaux</SelectItem>
+                  {commonChannels.map(channel => (
+                    <SelectItem key={channel} value={channel}>{channel}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="filterStartDate">Date d'arrivée (début)</Label>
+              <Input
+                id="filterStartDate"
+                type="date"
+                value={filterStartDate}
+                onChange={(e) => setFilterStartDate(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="filterEndDate">Date d'arrivée (fin)</Label>
+              <Input
+                id="filterEndDate"
+                type="date"
+                value={filterEndDate}
+                onChange={(e) => setFilterEndDate(e.target.value)}
+              />
+            </div>
+            <div className="col-span-1 md:col-span-2 lg:col-span-4 flex justify-end">
+              <Button variant="outline" onClick={handleResetFilters} className="flex items-center">
+                <XCircle className="h-4 w-4 mr-2" />
+                Réinitialiser les filtres
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="shadow-md">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Liste de vos réservations</CardTitle>
@@ -136,10 +282,10 @@ const BookingsPage: React.FC = () => {
                 Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour voir les réservations ici.
               </p>
             )}
-            {!loading && !error && userRooms.length > 0 && bookings.length === 0 && (
-              <p className="text-gray-500">Aucune réservation trouvée pour vos chambres en {currentYear}.</p>
+            {!loading && !error && userRooms.length > 0 && filteredBookings.length === 0 && (
+              <p className="text-gray-500">Aucune réservation trouvée pour vos chambres en {currentYear} avec les filtres actuels.</p>
             )}
-            {!loading && !error && bookings.length > 0 && (
+            {!loading && !error && filteredBookings.length > 0 && (
               <>
                 {/* Desktop Table View */}
                 {!isMobile && (
@@ -158,7 +304,7 @@ const BookingsPage: React.FC = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {bookings.map((booking) => (
+                        {filteredBookings.map((booking) => (
                           <TableRow key={booking.id} onClick={() => handleOpenDetails(booking)} className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700">
                             <TableCell className="font-medium">{booking.id}</TableCell>
                             <TableCell>{booking.guest_name}</TableCell>
@@ -184,7 +330,7 @@ const BookingsPage: React.FC = () => {
                 {/* Mobile Card View */}
                 {isMobile && (
                   <div className="grid grid-cols-1 gap-4">
-                    {bookings.map((booking) => (
+                    {filteredBookings.map((booking) => (
                       <Card key={booking.id} className="shadow-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => handleOpenDetails(booking)}>
                         <CardHeader className="pb-2">
                           <CardTitle className="text-base font-semibold flex items-center">
