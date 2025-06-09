@@ -136,13 +136,6 @@ serve(async (req) => {
       if (requestBody.id_room) { 
         payload.id_room = requestBody.id_room; 
       }
-      // Add date filters from requestBody to Krossbooking API payload
-      if (requestBody.date_from) {
-        payload.date_from = requestBody.date_from;
-      }
-      if (requestBody.date_to) {
-        payload.date_to = requestBody.date_to;
-      }
       krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
       krossbookingBody = JSON.stringify(payload);
     } else if (action === 'get_housekeeping_tasks') {

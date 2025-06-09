@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addDays, subDays, differenceInDays, isValid, max, min } from 'date-fns';
 import { fr } from 'date-fns/locale'; // Pour le formatage en français
 import { Button } from '@/components/ui/button';
@@ -41,28 +41,19 @@ const BookingPlanningGrid: React.FC = () => {
   const [housekeepingTasks, setHousekeepingTasks] = useState<KrossbookingHousekeepingTask[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
-  const [gridContentWidth, setGridContentWidth] = useState(0);
-
-  const daysInMonth = useMemo(() => {
-    const start = startOfMonth(currentMonth);
-    const end = endOfMonth(currentMonth);
-    return eachDayOfInterval({ start, end });
-  }, [currentMonth]);
 
   useEffect(() => {
     const loadReservationsAndTasks = async () => {
       setLoading(true);
       setError(null);
       try {
-        const monthStartFormatted = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
-        const monthEndFormatted = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
-
-        console.log(`DEBUG: Fetching reservations for single room ID: ${defaultRoomId} from ${monthStartFormatted} to ${monthEndFormatted}`);
-        const fetchedReservations = await fetchKrossbookingReservations(defaultRoomId, monthStartFormatted, monthEndFormatted);
+        console.log(`DEBUG: Fetching reservations for single room ID: ${defaultRoomId}`);
+        const fetchedReservations = await fetchKrossbookingReservations(defaultRoomId);
         setReservations(fetchedReservations);
         console.log("DEBUG: Fetched reservations for default room:", fetchedReservations); 
 
+        const monthStartFormatted = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
+        const monthEndFormatted = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
         console.log(`DEBUG: Fetching housekeeping tasks for room ${defaultRoomId} from ${monthStartFormatted} to ${monthEndFormatted}`);
         const fetchedTasks = await fetchKrossbookingHousekeepingTasks(monthStartFormatted, monthEndFormatted, undefined, parseInt(defaultRoomId));
         setHousekeepingTasks(fetchedTasks);
@@ -77,21 +68,13 @@ const BookingPlanningGrid: React.FC = () => {
     };
 
     loadReservationsAndTasks();
-  }, [currentMonth]); // Re-fetch when month changes
+  }, [currentMonth]);
 
-  useEffect(() => {
-    const updateGridWidth = () => {
-      if (gridRef.current) {
-        // Subtract the fixed property column width to get the width available for day cells
-        setGridContentWidth(gridRef.current.offsetWidth - propertyColumnWidth);
-      }
-    };
-
-    updateGridWidth(); // Initial width calculation
-    window.addEventListener('resize', updateGridWidth); // Update on resize
-
-    return () => window.removeEventListener('resize', updateGridWidth);
-  }, [daysInMonth.length]); // Recalculate if number of days changes (e.g., different month)
+  const daysInMonth = useMemo(() => {
+    const start = startOfMonth(currentMonth);
+    const end = endOfMonth(currentMonth);
+    return eachDayOfInterval({ start, end });
+  }, [currentMonth]);
 
   const goToPreviousMonth = () => {
     setCurrentMonth(subMonths(currentMonth, 1));
@@ -101,8 +84,8 @@ const BookingPlanningGrid: React.FC = () => {
     setCurrentMonth(addMonths(currentMonth, 1));
   };
 
-  const propertyColumnWidth = 150; // Fixed width for the property name column
-  const actualDayCellWidth = daysInMonth.length > 0 ? gridContentWidth / daysInMonth.length : 0;
+  const dayCellWidth = 80;
+  const propertyColumnWidth = 150;
 
   const getTaskIcon = (status: string) => {
     switch (status.toLowerCase()) {
@@ -129,7 +112,7 @@ const BookingPlanningGrid: React.FC = () => {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="p-4">
+      <CardContent className="p-4 overflow-x-auto">
         {loading && <p className="text-gray-500">Chargement des réservations et tâches...</p>}
         {error && (
           <Alert variant="destructive" className="mb-4">
@@ -142,21 +125,19 @@ const BookingPlanningGrid: React.FC = () => {
           <p className="text-gray-500">Aucune réservation ou tâche trouvée pour la chambre "{defaultRoomName}".</p>
         )}
         {!loading && !error && (reservations.length > 0 || housekeepingTasks.length > 0) && (
-          <div 
-            ref={gridRef}
-            className="grid-container" 
-            style={{
-              gridTemplateColumns: `minmax(${propertyColumnWidth}px, 0.5fr) repeat(${daysInMonth.length}, 1fr)`,
-              gridAutoRows: '40px',
-              position: 'relative',
-            }}
-          >
+          <div className="grid-container" style={{
+            gridTemplateColumns: `minmax(${propertyColumnWidth}px, 0.5fr) repeat(${daysInMonth.length}, ${dayCellWidth}px)`,
+            minWidth: `${propertyColumnWidth + daysInMonth.length * dayCellWidth}px`,
+            gridAutoRows: '40px',
+            position: 'relative',
+          }}>
             {/* Header Row 1: Empty cell + Day numbers */}
             <div className="grid-cell header-cell sticky left-0 z-10 bg-white dark:bg-gray-950 border-b border-r col-span-1"></div>
             {daysInMonth.map((day, index) => (
               <div
                 key={index}
                 className="grid-cell header-cell text-center font-semibold border-b border-r"
+                style={{ width: `${dayCellWidth}px` }}
               >
                 {format(day, 'dd', { locale: fr })}
               </div>
@@ -168,6 +149,7 @@ const BookingPlanningGrid: React.FC = () => {
               <div
                 key={`day-name-${index}`}
                 className="grid-cell header-cell text-center text-xs text-gray-500 border-b border-r"
+                style={{ width: `${dayCellWidth}px` }}
               >
                 {format(day, 'EEE', { locale: fr })}
               </div>
@@ -191,6 +173,7 @@ const BookingPlanningGrid: React.FC = () => {
                   <div
                     key={`${defaultRoomId}-${format(day, 'yyyy-MM-dd')}-bg`}
                     className={`grid-cell border-b border-r relative flex flex-col justify-center items-center ${isSameDay(day, new Date()) ? 'bg-blue-50 dark:bg-blue-950' : 'bg-gray-50 dark:bg-gray-800'}`}
+                    style={{ width: `${dayCellWidth}px` }}
                   >
                     {/* Housekeeping Tasks Icon */}
                     {tasksForThisDay.length > 0 && (
@@ -237,14 +220,12 @@ const BookingPlanningGrid: React.FC = () => {
                   const numberOfNights = differenceInDays(checkOut, checkIn);
 
                   // The bar visually spans from check-in day to check-out day (inclusive)
-                  // For visual representation, we want the bar to start on check-in and end on check-out day.
-                  // If check-out is the same as check-in, it's a 1-day visual span.
-                  const visualSpanStart = checkIn;
-                  const visualSpanEnd = numberOfNights === 0 ? checkIn : subDays(checkOut, 1); // If 0 nights, it's just the check-in day. Otherwise, it's the day before check-out.
+                  const barStartDate = checkIn;
+                  const barEndDate = checkOut; 
 
                   // Determine the effective visible start and end of the reservation bar within the current month
-                  const visibleBarStart = max([visualSpanStart, monthStart]);
-                  const visibleBarEnd = min([visualSpanEnd, monthEnd]);
+                  const visibleBarStart = max([barStartDate, monthStart]);
+                  const visibleBarEnd = min([barEndDate, monthEnd]);
 
                   // If reservation doesn't overlap with current month's visual span, don't render the bar
                   if (visibleBarStart > visibleBarEnd) {
@@ -259,22 +240,32 @@ const BookingPlanningGrid: React.FC = () => {
                     return null;
                   }
 
-                  // Calculate left position and width based on actualDayCellWidth
-                  // The `+ 1` in width calculation is to include the end day's width
-                  const calculatedLeft = propertyColumnWidth + (startIndex * actualDayCellWidth);
-                  const calculatedWidth = (endIndex - startIndex + 1) * actualDayCellWidth;
+                  let calculatedLeft: number;
+                  let calculatedWidth: number;
+                  const isSingleDayStay = numberOfNights === 0; // 0 nights means arrival and departure on the same day
+
+                  if (isSingleDayStay) {
+                    // For single-day stays, center the bar within the cell and give it half the cell's width
+                    calculatedLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 4); // Start at 1/4 of the cell
+                    calculatedWidth = dayCellWidth / 2; // Span half the cell
+                  } else {
+                    // For multi-day stays, start at the center of the first day and end at the center of the last day
+                    calculatedLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 2);
+                    // Width spans from center of startIndex to center of endIndex
+                    calculatedWidth = (endIndex - startIndex) * dayCellWidth;
+                  }
 
                   const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
 
                   const isArrivalDayVisible = isSameDay(checkIn, visibleBarStart);
-                  const isDepartureDayVisible = isSameDay(checkOut, addDays(visibleBarEnd, 1)); // Check if actual checkout is the day after visible bar end
+                  const isDepartureDayVisible = isSameDay(checkOut, visibleBarEnd);
                   
                   const barClasses = cn(
-                    `absolute h-9 flex items-center justify-center text-xs font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm cursor-pointer hover:opacity-90 transition-opacity inset-y-1`, // Added inset-y-1 for vertical padding
+                    `absolute h-9 flex items-center justify-center text-xs font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm cursor-pointer hover:opacity-90 transition-opacity`,
                     {
-                      'rounded-full': numberOfNights === 0, // Full round for same-day arrival/departure
-                      'rounded-l-full': isArrivalDayVisible && numberOfNights > 0, // Left round for multi-day arrival
-                      'rounded-r-full': isDepartureDayVisible && numberOfNights > 0, // Right round for multi-day departure
+                      'rounded-full': isSingleDayStay, // Full round for single day
+                      'rounded-l-full': isArrivalDayVisible && !isSingleDayStay, // Left round for multi-day arrival
+                      'rounded-r-full': isDepartureDayVisible && !isSingleDayStay, // Right round for multi-day departure
                       // No rounding if it's a middle segment of a long reservation spanning across months
                     }
                   );
@@ -288,6 +279,9 @@ const BookingPlanningGrid: React.FC = () => {
                             gridRow: '3', // Always on the third row (after two header rows)
                             left: `${calculatedLeft}px`,
                             width: `${calculatedWidth}px`,
+                            height: '36px', // Adjusted for better vertical centering
+                            marginTop: '2px', // Small margin from the top of the grid row
+                            marginBottom: '2px', // Small margin from the bottom of the grid row
                             zIndex: 5, // Ensure bars are above background cells but below icons
                             display: 'flex', // Ensure flexbox for icon positioning
                             justifyContent: 'space-between', // Distribute items
@@ -296,10 +290,10 @@ const BookingPlanningGrid: React.FC = () => {
                           }}
                         >
                           {/* Render LogIn icon at the start of the bar if it's the check-in day */}
-                          {isArrivalDayVisible && numberOfNights > 0 && <LogIn className="h-4 w-4 flex-shrink-0" />}
+                          {isArrivalDayVisible && !isSingleDayStay && <LogIn className="h-4 w-4 flex-shrink-0" />}
                           
                           {/* Render Sparkles icon for single-day reservations (arrival and departure on same day) */}
-                          {numberOfNights === 0 && <Sparkles className="h-4 w-4 flex-shrink-0" />}
+                          {isSingleDayStay && <Sparkles className="h-4 w-4 flex-shrink-0" />}
 
                           <span className="flex-grow text-center px-1 truncate">
                             <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
@@ -309,7 +303,7 @@ const BookingPlanningGrid: React.FC = () => {
                           </span>
 
                           {/* Render LogOut icon at the end of the bar if it's the check-out day (or same day for 0 nights) */}
-                          {isDepartureDayVisible && numberOfNights > 0 && <LogOut className="h-4 w-4 flex-shrink-0" />}
+                          {isDepartureDayVisible && !isSingleDayStay && <LogOut className="h-4 w-4 flex-shrink-0" />}
                         </div>
                       </TooltipTrigger>
                       <TooltipContent className="p-2 text-sm">
