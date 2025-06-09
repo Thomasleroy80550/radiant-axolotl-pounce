@@ -12,6 +12,7 @@ import { Terminal } from 'lucide-react';
 import { fetchKrossbookingReservations } from '@/lib/krossbooking';
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
+import CustomCalendarDay from '@/components/CustomCalendarDay'; // Import the new component
 
 interface KrossbookingReservation {
   id: string;
@@ -67,16 +68,48 @@ const CalendarPage: React.FC = () => {
     loadReservations();
   }, []);
 
-  const bookedDays = useMemo(() => {
-    const dates: Date[] = [];
+  const dayReservationSegments = useMemo(() => {
+    const map = new Map<string, { type: 'arrival' | 'departure' | 'middle' | 'single', channel: string }[]>();
     reservations.forEach(res => {
       const checkIn = parseISO(res.check_in_date);
-      const checkOut = parseISO(res.check_out_date);
-      eachDayOfInterval({ start: checkIn, end: addDays(checkOut, -1) }).forEach(day => {
-        dates.push(day);
-      });
+      const checkOut = parseISO(res.check_out_date); // This is the day *after* the last night
+
+      const numberOfNights = differenceInDays(checkOut, checkIn);
+
+      if (numberOfNights <= 0) { 
+        return; // Skip invalid reservations (e.g., check-out before or on check-in)
+      }
+
+      if (numberOfNights === 1) { // Single night stay
+        const dayKey = format(checkIn, 'yyyy-MM-dd');
+        const segmentsForDay = map.get(dayKey) || [];
+        segmentsForDay.push({
+          type: 'single', // New type for single-day bookings
+          channel: res.channel_identifier || 'UNKNOWN',
+        });
+        map.set(dayKey, segmentsForDay);
+      } else { // Multi-night stay
+        eachDayOfInterval({ start: checkIn, end: addDays(checkOut, -1) }).forEach(day => {
+          const dayKey = format(day, 'yyyy-MM-dd');
+          let type: 'arrival' | 'departure' | 'middle' | 'single';
+          if (isSameDay(day, checkIn)) {
+            type = 'arrival';
+          } else if (isSameDay(day, addDays(checkOut, -1))) { // Last night of the stay
+            type = 'departure';
+          } else {
+            type = 'middle';
+          }
+
+          const segmentsForDay = map.get(dayKey) || [];
+          segmentsForDay.push({
+            type: type,
+            channel: res.channel_identifier || 'UNKNOWN',
+          });
+          map.set(dayKey, segmentsForDay);
+        });
+      }
     });
-    return dates;
+    return map;
   }, [reservations]);
 
   const filteredReservations = useMemo(() => {
@@ -92,7 +125,8 @@ const CalendarPage: React.FC = () => {
       return reservations.filter(res => {
         const checkIn = parseISO(res.check_in_date);
         const checkOut = parseISO(res.check_out_date);
-        return isSameDay(selectedDate, checkIn) || (selectedDate > checkIn && selectedDate < checkOut);
+        // A reservation is relevant if the selected date is between check-in (inclusive) and check-out (exclusive)
+        return selectedDate >= checkIn && selectedDate < checkOut;
       }).sort((a, b) => parseISO(a.check_in_date).getTime() - parseISO(b.check_in_date).getTime());
     }
   }, [reservations, selectedDate, currentMonth]);
@@ -140,17 +174,19 @@ const CalendarPage: React.FC = () => {
                     selected={selectedDate}
                     onSelect={setSelectedDate}
                     initialFocus
-                    modifiers={{ booked: bookedDays }}
-                    modifiersStyles={{
-                      booked: {
-                        backgroundColor: 'hsl(var(--primary))', // Use primary color for booked days
-                        color: 'hsl(var(--primary-foreground))', // Ensure text is readable
-                        borderRadius: '0.25rem', // Keep rounded corners for the day cell
-                      },
-                    }}
                     className="rounded-md border"
                     month={currentMonth}
                     onMonthChange={setCurrentMonth}
+                    components={{
+                      Day: (props) => (
+                        <CustomCalendarDay
+                          {...props}
+                          displayMonth={currentMonth}
+                          dayReservationSegments={dayReservationSegments}
+                          channelColors={channelColors}
+                        />
+                      ),
+                    }}
                   />
                   <div className="mt-6 w-full">
                     <h3 className="text-xl font-semibold mb-4">
