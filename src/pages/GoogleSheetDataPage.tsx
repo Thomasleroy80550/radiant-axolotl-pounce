@@ -17,8 +17,9 @@ const GoogleSheetDataPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
+        // Request a wider range to ensure all columns are fetched
         // The gsheet-proxy function will automatically use the sheet ID and tab from the user's profile
-        const data = await callGSheetProxy({ action: 'read_sheet' });
+        const data = await callGSheetProxy({ action: 'read_sheet', range: 'A:AZ' }); // Request columns A to AZ
         setSheetData(data);
         toast.success("Données du Google Sheet chargées !");
       } catch (err: any) {
