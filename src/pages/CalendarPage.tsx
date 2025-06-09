@@ -7,7 +7,7 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterv
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Home, CalendarDays, User, DollarSign } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } => '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { fetchKrossbookingReservations } from '@/lib/krossbooking';
 import { Calendar } from '@/components/ui/calendar';
