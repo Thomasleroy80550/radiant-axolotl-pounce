@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, ChevronDown, Search, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, FileText, LifeBuoy, Puzzle, Map, User, Menu, Plus } from 'lucide-react'; // Added 'Plus' icon
+import { Bell, ChevronDown, Search, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, FileText, LifeBuoy, Puzzle, Map, User, Menu, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -29,6 +29,7 @@ const bottomNavigationItems = [
   { name: 'Modules', href: '/modules', icon: Puzzle },
   { name: 'Road Map', href: '/roadmap', icon: Map },
   { name: 'Paramètres', href: '/settings', icon: Settings },
+  { name: 'Mon Profil', href: '/profile', icon: User }, // Added link to Profile Page
 ];
 
 // Reusable Sidebar content
