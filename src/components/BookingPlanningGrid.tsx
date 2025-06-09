@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addDays, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale'; // Pour le formatage en français
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Importation ajoutée
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, Home } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
@@ -22,7 +22,7 @@ interface KrossbookingReservation {
 }
 
 // Définir l'ID et le nom de la chambre par défaut à afficher
-const defaultRoomId = '62'; // Remplacez par l'ID de la chambre Krossbooking que vous souhaitez afficher
+const defaultRoomId = '36'; // Remplacez par l'ID de la chambre Krossbooking que vous souhaitez afficher
 const defaultRoomName = 'Ma Chambre par défaut (2c)'; // Nom affiché pour cette chambre
 
 // Mapping des codes de canal Krossbooking vers des noms et couleurs Tailwind CSS
@@ -77,7 +77,6 @@ const BookingPlanningGrid: React.FC = () => {
 
   const dayCellWidth = 80; // px, width of each full day column
   const propertyColumnWidth = 150; // px, width of the property name column
-  const halfDayWidth = dayCellWidth / 2; // Represents half a day for arrival/departure
 
   return (
     <Card className="shadow-md">
@@ -159,76 +158,47 @@ const BookingPlanningGrid: React.FC = () => {
               {reservations
                 .map((reservation) => {
                   const checkIn = parseISO(reservation.check_in_date);
-                  const checkOut = parseISO(reservation.check_out_date); // This is the day *after* the last night
+                  const checkOut = parseISO(reservation.check_out_date);
 
-                  // Calculate the number of nights (days occupied)
-                  const numberOfNights = differenceInDays(checkOut, checkIn);
-
-                  if (numberOfNights <= 0) {
-                    console.warn(`DEBUG: Skipping invalid reservation ${reservation.id} with check-in ${reservation.check_in_date} and check-out ${reservation.check_out_date}`);
-                    return null;
-                  }
-
-                  // Determine the effective visible start and end of the reservation bar within the current month
                   const monthStart = startOfMonth(currentMonth);
                   const monthEnd = endOfMonth(currentMonth);
 
-                  // The actual last occupied day of the stay
-                  const lastOccupiedDay = addDays(checkOut, -1);
+                  // Determine the effective visible start and end of the reservation bar within the current month
+                  const visibleCheckIn = checkIn < monthStart ? monthStart : checkIn;
+                  const visibleCheckOut = checkOut > monthEnd ? monthEnd : checkOut;
 
-                  // Determine the visible start and end dates for the bar within the current month
-                  const visibleStartDay = checkIn < monthStart ? monthStart : checkIn;
-                  const visibleEndDay = lastOccupiedDay > monthEnd ? monthEnd : lastOccupiedDay;
-
-                  // If the visible range is invalid (e.g., reservation doesn't overlap with current month)
-                  if (visibleStartDay > visibleEndDay) {
+                  // If reservation doesn't overlap with current month, don't render
+                  if (visibleCheckIn > visibleCheckOut) {
                     return null;
                   }
 
-                  const startIndex = daysInMonth.findIndex(d => isSameDay(d, visibleStartDay));
-                  const endIndex = daysInMonth.findIndex(d => isSameDay(d, visibleEndDay));
+                  const startIndex = daysInMonth.findIndex(d => isSameDay(d, visibleCheckIn));
+                  const endIndex = daysInMonth.findIndex(d => isSameDay(d, visibleCheckOut));
 
-                  if (startIndex === -1 || endIndex === -1) {
-                    console.warn(`DEBUG: Reservation ${reservation.id} visible dates not found in current month's days array. Visible start: ${format(visibleStartDay, 'yyyy-MM-dd')}, Visible end: ${format(visibleEndDay, 'yyyy-MM-dd')}`);
+                  if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
+                    console.warn(`DEBUG: Reservation ${reservation.id} dates not found in current month's days array or invalid range. Visible range: ${format(visibleCheckIn, 'yyyy-MM-dd')} to ${format(visibleCheckOut, 'yyyy-MM-dd')}. Start Index: ${startIndex}, End Index: ${endIndex}`);
                     return null;
                   }
 
-                  let barLeft = propertyColumnWidth + (startIndex * dayCellWidth);
-                  let barWidth = (endIndex - startIndex + 1) * dayCellWidth;
+                  // Calculate left position: property column width + (start day index * day cell width) + half of day cell width
+                  const barLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 2);
+                  
+                  // Calculate width: (end day index - start day index) * day cell width
+                  // This spans from the start of the start day to the start of the end day.
+                  // We need to add half a day cell width to the end to reach the middle of the end day.
+                  const barWidth = (endIndex - startIndex) * dayCellWidth;
+
+                  // Determine rounding classes
                   let barBorderClasses = '';
-
-                  const isOriginalCheckInVisible = isSameDay(checkIn, visibleStartDay);
-                  const isOriginalCheckOutVisible = isSameDay(lastOccupiedDay, visibleEndDay); // Check if the original last occupied day is visible
-
-                  const isSingleNightBooking = numberOfNights === 1;
-
-                  if (isSingleNightBooking) {
-                    // For single-night bookings, it's a half-day bar centered in the cell
-                    barLeft += dayCellWidth / 4; // Shift right by 1/4 of cell width
-                    barWidth = dayCellWidth / 2; // Make it half the cell width
-                    barBorderClasses = ' rounded-full';
-                  } else {
-                    // For multi-night bookings, adjust for arrival and departure visuals
-                    if (isOriginalCheckInVisible) {
-                      barLeft += halfDayWidth; // Start from the middle of the arrival day cell
-                      barWidth -= halfDayWidth; // Reduce width by half a day from the left
-                      barBorderClasses += ' rounded-l-full';
-                    }
-                    if (isOriginalCheckOutVisible) {
-                      barWidth -= halfDayWidth; // Reduce width by half a day from the right
-                      barBorderClasses += ' rounded-r-full';
-                    }
+                  if (isSameDay(checkIn, visibleCheckIn)) {
+                    barBorderClasses += ' rounded-l-full';
                   }
-
-                  // If the reservation spans across months, ensure no rounding on the "cut" side
-                  if (!isOriginalCheckInVisible && !isSingleNightBooking) { // Starts before current month
-                    barBorderClasses = barBorderClasses.replace(' rounded-l-full', '');
-                  }
-                  if (!isOriginalCheckOutVisible && !isSingleNightBooking) { // Ends after current month
-                    barBorderClasses = barBorderClasses.replace(' rounded-r-full', '');
+                  if (isSameDay(checkOut, visibleCheckOut)) {
+                    barBorderClasses += ' rounded-r-full';
                   }
 
                   const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
+                  const numberOfNights = differenceInDays(checkOut, checkIn);
 
                   return (
                     <div
@@ -242,7 +212,7 @@ const BookingPlanningGrid: React.FC = () => {
                         marginTop: '2px', // Small margin from the top of the grid row
                         marginBottom: '2px', // Small margin from the bottom of the grid row
                       }}
-                      title={`${reservation.guest_name} (${channelInfo.name}, ${reservation.status}) - Du ${format(checkIn, 'dd/MM/yyyy', { locale: fr })} au ${format(lastOccupiedDay, 'dd/MM/yyyy', { locale: fr })} (Départ le ${format(checkOut, 'dd/MM/yyyy', { locale: fr })})`}
+                      title={`${reservation.guest_name} (${channelInfo.name}, ${reservation.status}) - Du ${format(checkIn, 'dd/MM', { locale: fr })} au ${format(checkOut, 'dd/MM', { locale: fr })}`}
                     >
                       <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
                       <span className="mr-1">€ {numberOfNights}</span>
@@ -266,7 +236,7 @@ const BookingPlanningGrid: React.FC = () => {
               </div>
             ))}
           </div>
-        </CardContent>
+        </div>
       </CardContent>
     </Card>
   );

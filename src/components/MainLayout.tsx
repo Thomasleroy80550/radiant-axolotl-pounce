@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, ChevronDown, Search, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, FileText, LifeBuoy, Puzzle, Map, User, Menu, Plus } from 'lucide-react';
+import { Bell, ChevronDown, Search, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, FileText, LifeBuoy, Puzzle, Map, User, Menu, Plus } from 'lucide-react'; // Added 'Plus' icon
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -108,8 +108,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <header className="bg-white dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shadow-sm">
-          {/* Left section: Mobile menu (if mobile), Temperature */}
-          <div className="flex items-center gap-x-4"> {/* Use gap-x for consistent spacing */}
+          <div className="flex items-center space-x-4">
             {isMobile && (
               <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                 <SheetTrigger asChild>
@@ -122,31 +121,32 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 </SheetContent>
               </Sheet>
             )}
-            <span className="text-lg font-semibold flex-shrink-0">0°C</span> {/* Prevent shrinking */}
+            <span className="text-lg font-semibold">0°C</span> {/* Placeholder for temperature */}
           </div>
 
-          {/* Right section: Quick Actions, Notifications, User Dropdown */}
-          <div className="flex items-center gap-x-2 sm:gap-x-4"> {/* Use gap-x, adjust for sm screens */}
+          <div className="flex items-center space-x-2 sm:space-x-4"> {/* Reduced space-x for mobile */}
             <Button variant="outline" className="flex items-center">
-              <Plus className="h-4 w-4" />
-              <span className="ml-2 hidden sm:inline">Actions rapides</span> {/* Hidden on mobile, inline on sm+ */}
+              <Plus className="h-4 w-4" /> {/* Always show Plus icon */}
+              {!isMobile && <span className="ml-2">Actions rapides</span>} {/* Show text only on desktop */}
             </Button>
-            <Button variant="ghost" size="icon" className="relative flex-shrink-0"> {/* Prevent shrinking */}
+            <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
-              <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500" />
+              <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500" /> {/* Notification indicator */}
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 rounded-full flex items-center gap-x-2 pr-2"> {/* Use gap-x, adjust padding */}
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full flex items-center space-x-2">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src="/avatars/01.png" alt="Thomas" />
                     <AvatarFallback>TH</AvatarFallback>
                   </Avatar>
-                  <div className="hidden sm:flex flex-col items-start"> {/* Hidden on mobile, flex on sm+ */}
-                    <span className="text-sm font-medium">Thomas</span>
-                    <span className="text-xs leading-none text-gray-500 dark:text-gray-400">Compte admin</span>
-                  </div>
-                  <ChevronDown className="h-4 w-4" /> {/* No ml-2 here, gap-x handles it */}
+                  {!isMobile && ( // Show name/role only on desktop
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-medium">Thomas</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Compte admin</span>
+                    </div>
+                  )}
+                  <ChevronDown className="h-4 w-4 ml-2" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
