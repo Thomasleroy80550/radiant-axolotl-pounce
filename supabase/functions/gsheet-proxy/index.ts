@@ -16,15 +16,19 @@ async function getGoogleAccessToken(): Promise<string> {
     throw new Error("Missing Google Sheets API credentials in environment variables. Please ensure GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY are set as Supabase secrets.");
   }
 
-  // Clean the private key string: remove headers/footers and all whitespace
-  const GOOGLE_PRIVATE_KEY_CLEAN = rawPrivateKey
+  // Step 1: Replace escaped newlines with actual newlines (if Supabase stores them escaped)
+  const privateKeyWithCorrectNewlines = rawPrivateKey.replace(/\\n/g, '\n');
+
+  // Step 2 & 3: Remove headers/footers and all remaining whitespace (including actual newlines)
+  const GOOGLE_PRIVATE_KEY_CLEAN = privateKeyWithCorrectNewlines
     .replace('-----BEGIN PRIVATE KEY-----', '')
     .replace('-----END PRIVATE KEY-----', '')
-    .replace(/\s/g, ''); // Remove all whitespace, including newlines
+    .replace(/\s/g, ''); // This will remove all newlines and other whitespace
 
   console.log("DEBUG: GOOGLE_SERVICE_ACCOUNT_EMAIL:", GOOGLE_SERVICE_ACCOUNT_EMAIL);
   console.log("DEBUG: Cleaned GOOGLE_PRIVATE_KEY (first 50 chars):", GOOGLE_PRIVATE_KEY_CLEAN.substring(0, 50) + '...');
   console.log("DEBUG: Cleaned GOOGLE_PRIVATE_KEY length:", GOOGLE_PRIVATE_KEY_CLEAN.length);
+  console.log("DEBUG: Cleaned GOOGLE_PRIVATE_KEY contains newlines (should be false):", GOOGLE_PRIVATE_KEY_CLEAN.includes('\n'));
 
   const header = {
     alg: "RS256",
