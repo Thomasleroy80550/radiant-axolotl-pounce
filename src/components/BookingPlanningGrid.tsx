@@ -3,30 +3,28 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterv
 import { fr } from 'date-fns/locale'; // Pour le formatage en français
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle, LogIn, LogOut } from 'lucide-react'; // Added LogIn, LogOut icons
+import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle, LogIn, LogOut } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import { fetchKrossbookingReservations, fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask } from '@/lib/krossbooking'; // Import fetchKrossbookingReservations and KrossbookingHousekeepingTask
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'; // Import Tooltip components
+import { fetchKrossbookingReservations, fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask } from '@/lib/krossbooking';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface KrossbookingReservation {
   id: string;
   guest_name: string;
-  property_name: string; // This will now be the actual room ID from Krossbooking
+  property_name: string;
   check_in_date: string;
   check_out_date: string;
   status: string;
   amount: string;
-  cod_channel?: string; // Nouveau champ pour le code du canal (ex: 'AIRBNB', 'BOOKING')
-  ota_id?: string;      // Nouveau champ pour l'ID de référence du canal
-  channel_identifier?: string; // Utilisé pour la logique de couleur dans le calendrier
+  cod_channel?: string;
+  ota_id?: string;
+  channel_identifier?: string;
 }
 
-// Définir l'ID et le nom de la chambre par défaut à afficher
-const defaultRoomId = '36'; // Remplacez par l'ID de la chambre Krossbooking que vous souhaitez afficher
-const defaultRoomName = 'Ma Chambre par défaut (2c)'; // Nom affiché pour cette chambre
+const defaultRoomId = '36';
+const defaultRoomName = 'Ma Chambre par défaut (2c)';
 
-// Mapping des codes de canal Krossbooking vers des noms et couleurs Tailwind CSS
 const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
   'AIRBNB': { name: 'Airbnb', bgColor: 'bg-red-600', textColor: 'text-white' },
   'BOOKING': { name: 'Booking.com', bgColor: 'bg-blue-700', textColor: 'text-white' },
@@ -39,7 +37,7 @@ const channelColors: { [key: string]: { name: string; bgColor: string; textColor
 const BookingPlanningGrid: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
-  const [housekeepingTasks, setHousekeepingTasks] = useState<KrossbookingHousekeepingTask[]>([]); // New state for tasks
+  const [housekeepingTasks, setHousekeepingTasks] = useState<KrossbookingHousekeepingTask[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,7 +51,6 @@ const BookingPlanningGrid: React.FC = () => {
         setReservations(fetchedReservations);
         console.log("DEBUG: Fetched reservations for default room:", fetchedReservations); 
 
-        // Fetch housekeeping tasks for the current month
         const monthStartFormatted = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
         const monthEndFormatted = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
         console.log(`DEBUG: Fetching housekeeping tasks for room ${defaultRoomId} from ${monthStartFormatted} to ${monthEndFormatted}`);
@@ -70,7 +67,7 @@ const BookingPlanningGrid: React.FC = () => {
     };
 
     loadReservationsAndTasks();
-  }, [currentMonth]); // Re-fetch when month changes
+  }, [currentMonth]);
 
   const daysInMonth = useMemo(() => {
     const start = startOfMonth(currentMonth);
@@ -86,10 +83,9 @@ const BookingPlanningGrid: React.FC = () => {
     setCurrentMonth(addMonths(currentMonth, 1));
   };
 
-  const dayCellWidth = 80; // px, width of each full day column
-  const propertyColumnWidth = 150; // px, width of the property name column
+  const dayCellWidth = 80;
+  const propertyColumnWidth = 150;
 
-  // Function to get icon based on task status
   const getTaskIcon = (status: string) => {
     switch (status.toLowerCase()) {
       case 'completed': return <CheckCircle className="h-3 w-3 text-green-500" />;
@@ -130,9 +126,9 @@ const BookingPlanningGrid: React.FC = () => {
         {!loading && !error && (reservations.length > 0 || housekeepingTasks.length > 0) && (
           <div className="grid-container" style={{
             gridTemplateColumns: `minmax(${propertyColumnWidth}px, 0.5fr) repeat(${daysInMonth.length}, ${dayCellWidth}px)`,
-            minWidth: `${propertyColumnWidth + daysInMonth.length * dayCellWidth}px`, // Ensure minimum width for scroll
-            gridAutoRows: '40px', // Height of each row (header, property row)
-            position: 'relative', // For absolute positioning of reservation bars
+            minWidth: `${propertyColumnWidth + daysInMonth.length * dayCellWidth}px`,
+            gridAutoRows: '40px',
+            position: 'relative',
           }}>
             {/* Header Row 1: Empty cell + Day numbers */}
             <div className="grid-cell header-cell sticky left-0 z-10 bg-white dark:bg-gray-950 border-b border-r col-span-1"></div>
@@ -172,19 +168,6 @@ const BookingPlanningGrid: React.FC = () => {
                   isValid(parseISO(task.date)) && isSameDay(parseISO(task.date), day) && task.id_room.toString() === defaultRoomId
                 );
 
-                // Find reservations that start or end on this specific day
-                const arrivalsOnThisDay = reservations.filter(res =>
-                  isValid(parseISO(res.check_in_date)) && isSameDay(parseISO(res.check_in_date), day)
-                );
-                const departuresOnThisDay = reservations.filter(res =>
-                  isValid(parseISO(res.check_out_date)) && isSameDay(parseISO(res.check_out_date), day)
-                );
-
-                // Determine if it's a "changeover" day (arrival and departure on the same day)
-                const isChangeoverDay = arrivalsOnThisDay.some(arr =>
-                  departuresOnThisDay.some(dep => dep.id === arr.id)
-                );
-
                 return (
                   <div
                     key={`${defaultRoomId}-${format(day, 'yyyy-MM-dd')}-bg`}
@@ -213,47 +196,6 @@ const BookingPlanningGrid: React.FC = () => {
                           ))}
                         </TooltipContent>
                       </Tooltip>
-                    )}
-
-                    {/* Arrival/Departure Icons */}
-                    {isChangeoverDay ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-purple-500 text-white z-10">
-                            <Sparkles className="h-4 w-4" />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent className="p-2 text-sm">
-                          Arrivée et Départ le même jour
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      <>
-                        {arrivalsOnThisDay.length > 0 && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-green-600 text-white z-10">
-                                <LogIn className="h-4 w-4" />
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent className="p-2 text-sm">
-                              Jour d'arrivée
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                        {departuresOnThisDay.length > 0 && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-red-600 text-white z-10">
-                                <LogOut className="h-4 w-4" />
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent className="p-2 text-sm">
-                              Jour de départ
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                      </>
                     )}
                   </div>
                 );
@@ -308,12 +250,6 @@ const BookingPlanningGrid: React.FC = () => {
 
                   const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
 
-                  // Only render the bar if there's at least one occupied night
-                  if (numberOfNights === 0 && !isSameDay(checkIn, checkOut)) {
-                    // This case should ideally not happen if checkIn and checkOut are valid and different
-                    return null;
-                  }
-
                   return (
                     <Tooltip key={reservation.id}>
                       <TooltipTrigger asChild>
@@ -329,12 +265,31 @@ const BookingPlanningGrid: React.FC = () => {
                             zIndex: 5, // Ensure bars are above background cells but below icons
                           }}
                         >
-                          <span className="px-2">
+                          {/* Render LogIn icon at the start of the bar if it's the check-in day */}
+                          {isSameDay(checkIn, visibleBarStart) && (
+                            <LogIn className="h-4 w-4 ml-1 mr-1" />
+                          )}
+
+                          {/* Render Sparkles icon for single-day reservations (arrival and departure on same day) */}
+                          {numberOfNights === 0 && isSameDay(checkIn, checkOut) && (
+                            <Sparkles className="h-4 w-4 mx-1" />
+                          )}
+
+                          <span className="px-1 flex-grow text-center">
                             <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
                             <span className="mr-1">€ {numberOfNights}</span>
                             <span className="mx-1">|</span>
                             <span className="truncate">{reservation.guest_name}</span>
                           </span>
+
+                          {/* Render LogOut icon at the end of the bar if it's the check-out day (or same day for 0 nights) */}
+                          {isSameDay(checkOut, addDays(visibleBarEnd, 1)) && numberOfNights > 0 && (
+                            <LogOut className="h-4 w-4 ml-1 mr-1" />
+                          )}
+                          {numberOfNights === 0 && isSameDay(checkIn, checkOut) && (
+                            // For 0-night stays, the Sparkles icon already indicates the movement, no need for LogOut
+                            null
+                          )}
                         </div>
                       </TooltipTrigger>
                       <TooltipContent className="p-2 text-sm">
@@ -387,15 +342,15 @@ const BookingPlanningGrid: React.FC = () => {
             </div>
             <div className="flex items-center">
               <LogIn className="h-4 w-4 mr-2 text-white bg-green-600 rounded-full p-0.5" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Jour d'arrivée (icône sur le jour)</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Icône d'arrivée (dans la barre de réservation)</span>
             </div>
             <div className="flex items-center">
               <LogOut className="h-4 w-4 mr-2 text-white bg-red-600 rounded-full p-0.5" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Jour de départ (icône sur le jour)</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Icône de départ (dans la barre de réservation)</span>
             </div>
             <div className="flex items-center">
               <Sparkles className="h-4 w-4 mr-2 text-white bg-purple-500 rounded-full p-0.5" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Arrivée & Départ le même jour</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Arrivée & Départ le même jour (dans la barre de réservation)</span>
             </div>
           </div>
         </div>
