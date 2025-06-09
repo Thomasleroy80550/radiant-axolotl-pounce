@@ -3,7 +3,7 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterv
 import { fr } from 'date-fns/locale'; // Pour le formatage en français
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle } from 'lucide-react'; // Added Sparkles, CheckCircle, Clock, XCircle
+import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle, LogIn, LogOut } from 'lucide-react'; // Added LogIn, LogOut icons
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { fetchKrossbookingReservations, fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask } from '@/lib/krossbooking'; // Import fetchKrossbookingHousekeepingTasks and KrossbookingHousekeepingTask
@@ -172,6 +172,14 @@ const BookingPlanningGrid: React.FC = () => {
                   isValid(parseISO(task.date)) && isSameDay(parseISO(task.date), day) && task.id_room.toString() === defaultRoomId
                 );
 
+                // Check for arrival/departure on this specific day
+                const isArrivalDay = reservations.some(res => 
+                  isValid(parseISO(res.check_in_date)) && isSameDay(parseISO(res.check_in_date), day) && res.property_name === defaultRoomId
+                );
+                const isDepartureDay = reservations.some(res => 
+                  isValid(parseISO(res.check_out_date)) && isSameDay(parseISO(res.check_out_date), day) && res.property_name === defaultRoomId
+                );
+
                 return (
                   <div
                     key={`${defaultRoomId}-${format(day, 'yyyy-MM-dd')}-bg`}
@@ -197,6 +205,30 @@ const BookingPlanningGrid: React.FC = () => {
                               <span className="ml-1 capitalize">{task.task_type.replace('_', ' ')} - {task.status}</span>
                             </p>
                           ))}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                    {isArrivalDay && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="absolute bottom-1 left-1 flex items-center justify-center w-5 h-5 rounded-full bg-green-200 dark:bg-green-700 cursor-pointer">
+                            <LogIn className="h-3 w-3 text-green-800 dark:text-green-200" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="p-2 text-sm">
+                          Jour d'arrivée
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                    {isDepartureDay && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="absolute bottom-1 right-1 flex items-center justify-center w-5 h-5 rounded-full bg-red-200 dark:bg-red-700 cursor-pointer">
+                            <LogOut className="h-3 w-3 text-red-800 dark:text-red-200" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="p-2 text-sm">
+                          Jour de départ
                         </TooltipContent>
                       </Tooltip>
                     )}
@@ -290,27 +322,35 @@ const BookingPlanningGrid: React.FC = () => {
               </div>
             ))}
           </div>
-          <h3 className="text-md font-semibold mt-4 mb-3">Légende des tâches de ménage</h3>
+          <h3 className="text-md font-semibold mt-4 mb-3">Légende des tâches de ménage et mouvements</h3>
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center">
               <Sparkles className="h-4 w-4 mr-2 text-purple-500" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Générique / Autre</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Tâche générique / Autre</span>
             </div>
             <div className="flex items-center">
               <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Terminée</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Tâche terminée</span>
             </div>
             <div className="flex items-center">
               <Clock className="h-4 w-4 mr-2 text-yellow-500" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">En attente / En cours</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Tâche en attente / en cours</span>
             </div>
             <div className="flex items-center">
               <XCircle className="h-4 w-4 mr-2 text-red-500" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Annulée</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Tâche annulée</span>
             </div>
             <div className="flex items-center">
               <span className="w-4 h-4 mr-2 flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-full">2+</span>
               <span className="text-sm text-gray-700 dark:text-gray-300">Plusieurs tâches</span>
+            </div>
+            <div className="flex items-center">
+              <LogIn className="h-4 w-4 mr-2 text-green-800 dark:text-green-200" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">Jour d'arrivée</span>
+            </div>
+            <div className="flex items-center">
+              <LogOut className="h-4 w-4 mr-2 text-red-800 dark:text-red-200" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">Jour de départ</span>
             </div>
           </div>
         </div>
