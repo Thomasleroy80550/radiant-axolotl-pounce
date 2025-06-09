@@ -20,7 +20,8 @@ import Login from "./pages/Login";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import PageCreator from "./components/PageCreator";
 import ContentPage from "./pages/ContentPage";
-import ProfilePage from "./pages/ProfilePage"; // Import the new ProfilePage component
+import ProfilePage from "./pages/ProfilePage";
+import GoogleSheetDataPage from "./pages/GoogleSheetDataPage"; // Import the new GoogleSheetDataPage
 import { SessionContextProvider } from "./components/SessionContextProvider";
 
 const queryClient = new QueryClient();
@@ -37,7 +38,8 @@ const App = () => (
             <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="/admin/pages" element={<PageCreator />} />
             <Route path="/pages/:slug" element={<ContentPage />} />
-            <Route path="/profile" element={<ProfilePage />} /> {/* New route for Profile Page */}
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/my-google-sheet-data" element={<GoogleSheetDataPage />} /> {/* New route for Google Sheet Data Page */}
             <Route path="/" element={<DashboardPage />} />
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/bookings" element={<BookingsPage />} />

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, ChevronDown, Search, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, FileText, LifeBuoy, Puzzle, Map, User, Menu, Plus } from 'lucide-react';
+import { Bell, ChevronDown, Search, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, FileText, LifeBuoy, Puzzle, Map, User, Menu, Plus, FileSpreadsheet } from 'lucide-react'; // Added FileSpreadsheet icon
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -22,6 +22,7 @@ const navigationItems = [
   { name: 'Comptabilité', href: '/accounting', icon: Banknote },
   { name: 'Bilans', href: '/balances', icon: FileText },
   { name: 'Rapports', href: '/reports', icon: FileText },
+  { name: 'Mes Données GSheet', href: '/my-google-sheet-data', icon: FileSpreadsheet }, // New item for Google Sheet Data
   { name: 'Aides', href: '/help', icon: LifeBuoy },
 ];
 
@@ -29,7 +30,7 @@ const bottomNavigationItems = [
   { name: 'Modules', href: '/modules', icon: Puzzle },
   { name: 'Road Map', href: '/roadmap', icon: Map },
   { name: 'Paramètres', href: '/settings', icon: Settings },
-  { name: 'Mon Profil', href: '/profile', icon: User }, // Added link to Profile Page
+  { name: 'Mon Profil', href: '/profile', icon: User },
 ];
 
 // Reusable Sidebar content
