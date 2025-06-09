@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle, LogIn, LogOut } from 'lucide-react'; // Added LogIn, LogOut icons
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import { fetchKrossbookingReservations, fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask } from '@/lib/krossbooking'; // Import fetchKrossbookingReservations and KrossbookingHousekeepingTask
+import { fetchKrossbookingReservations, fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask } from '@/lib/krossbooking'; // Import fetchKrossbookingHousekeepingTasks and KrossbookingHousekeepingTask
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'; // Import Tooltip components
 
 interface KrossbookingReservation {
@@ -88,7 +88,6 @@ const BookingPlanningGrid: React.FC = () => {
 
   const dayCellWidth = 80; // px, width of each full day column
   const propertyColumnWidth = 150; // px, width of the property name column
-  // Removed horizontalPadding as it's now handled by inner padding and icon positioning
 
   // Function to get icon based on task status
   const getTaskIcon = (status: string) => {
@@ -265,14 +264,12 @@ const BookingPlanningGrid: React.FC = () => {
                         height: '36px', // Adjusted for better vertical centering
                         marginTop: '2px', // Small margin from the top of the grid row
                         marginBottom: '2px', // Small margin from the bottom of the grid row
-                        paddingLeft: isActualStartVisible ? '24px' : '8px', // Padding to make space for icon or just normal text
-                        paddingRight: isActualEndVisible ? '24px' : '8px', // Padding to make space for icon or just normal text
                       }}
                     >
                       {isActualStartVisible && (
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <div className="absolute left-0 top-0 bottom-0 flex items-center px-1 bg-black bg-opacity-20 rounded-l-full">
+                            <div className="flex items-center justify-center w-6 h-full bg-black bg-opacity-20 rounded-l-full">
                               <LogIn className="h-4 w-4 text-white" />
                             </div>
                           </TooltipTrigger>
@@ -281,7 +278,7 @@ const BookingPlanningGrid: React.FC = () => {
                           </TooltipContent>
                         </Tooltip>
                       )}
-                      <span className="flex-grow text-center"> {/* No specific padding here, handled by parent div */}
+                      <span className="flex-grow text-center px-2"> {/* Added px-2 for internal padding */}
                         <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
                         <span className="mr-1">€ {numberOfNights}</span>
                         <span className="mx-1">|</span>
@@ -290,7 +287,7 @@ const BookingPlanningGrid: React.FC = () => {
                       {isActualEndVisible && (
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <div className="absolute right-0 top-0 bottom-0 flex items-center px-1 bg-black bg-opacity-20 rounded-r-full">
+                            <div className="flex items-center justify-center w-6 h-full bg-black bg-opacity-20 rounded-r-full">
                               <LogOut className="h-4 w-4 text-white" />
                             </div>
                           </TooltipTrigger>
