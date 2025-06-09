@@ -1,16 +1,23 @@
 import React from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import BookingPlanningGrid from '@/components/BookingPlanningGrid'; // Import the now responsive component
+import BookingPlanningGrid from '@/components/BookingPlanningGrid';
+import MobileCalendarSummary from '@/components/MobileCalendarSummary'; // Import the new mobile component
+import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile hook
 
 const CalendarPage: React.FC = () => {
+  const isMobile = useIsMobile();
+
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Calendrier</h1>
         
-        {/* Always render BookingPlanningGrid, which is now responsive */}
-        <BookingPlanningGrid />
+        {isMobile ? (
+          <MobileCalendarSummary />
+        ) : (
+          <BookingPlanningGrid />
+        )}
         
         <Card className="shadow-md mt-6">
           <CardHeader>
