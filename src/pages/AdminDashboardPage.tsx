@@ -2,9 +2,10 @@ import React, { useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSession } from '@/components/SessionContextProvider';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom'; // Import Link
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
+import { Button } from '@/components/ui/button'; // Import Button
 
 const AdminDashboardPage: React.FC = () => {
   const { session, loading } = useSession();
@@ -16,21 +17,10 @@ const AdminDashboardPage: React.FC = () => {
       const userRole = session?.user?.user_metadata?.role || 'user'; // Assuming role is in user_metadata
       // For now, we'll fetch the role from the profiles table directly in the gsheet-proxy function
       // but for client-side checks, we might need to fetch it here or store it in session context.
-      // For this example, we'll rely on the backend check for sensitive actions,
-      // and a simple client-side check for UI redirection.
-      // A more robust solution would involve fetching the profile role here.
-
-      // For now, let's assume if they are on this page, they should be admin.
-      // The gsheet-proxy already checks for admin role.
-      // If we want to prevent access to the page itself, we need to fetch the profile role here.
-      // Let's add a placeholder for a more robust client-side role check.
-      console.log("DEBUG: AdminDashboardPage - Session:", session);
-      // This page is primarily a placeholder. Actual admin checks for sensitive actions
-      // will happen in Edge Functions (like gsheet-proxy).
-      // For a client-side check, we'd need to fetch the user's profile role here.
-      // For simplicity, we'll allow access for now and rely on backend for security.
+      // For this example, we'll allow access for now and rely on backend for security.
       // If you want to restrict access to this page, we'd need to fetch the user's role from the 'profiles' table.
       // For now, it's accessible, but actions within it will be restricted by the proxy.
+      console.log("DEBUG: AdminDashboardPage - Session:", session);
     }
   }, [loading, session, navigate]);
 
@@ -44,7 +34,6 @@ const AdminDashboardPage: React.FC = () => {
     );
   }
 
-  // Placeholder for admin content
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
@@ -54,6 +43,20 @@ const AdminDashboardPage: React.FC = () => {
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Gestion des Pages</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-700 dark:text-gray-300 mb-4">
+                Créez, modifiez et supprimez des pages de contenu dynamiques pour votre site.
+              </p>
+              <Link to="/admin/pages">
+                <Button>Accéder au Créateur de Pages</Button>
+              </Link>
+            </CardContent>
+          </Card>
+
           <Card className="shadow-md">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Gestion des Utilisateurs</CardTitle>

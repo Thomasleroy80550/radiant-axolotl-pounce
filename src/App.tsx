@@ -17,7 +17,9 @@ import RoadmapPage from "./pages/RoadmapPage";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
-import AdminDashboardPage from "./pages/AdminDashboardPage"; // Import the new AdminDashboardPage
+import AdminDashboardPage from "./pages/AdminDashboardPage";
+import PageCreator from "./components/PageCreator"; // Import the new PageCreator component
+import ContentPage from "./pages/ContentPage"; // Import the new ContentPage component
 import { SessionContextProvider } from "./components/SessionContextProvider";
 
 const queryClient = new QueryClient();
@@ -31,7 +33,9 @@ const App = () => (
         <SessionContextProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/admin" element={<AdminDashboardPage />} /> {/* Add the admin route */}
+            <Route path="/admin" element={<AdminDashboardPage />} />
+            <Route path="/admin/pages" element={<PageCreator />} /> {/* New route for Page Creator */}
+            <Route path="/pages/:slug" element={<ContentPage />} /> {/* New dynamic route for content pages */}
             <Route path="/" element={<DashboardPage />} />
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/bookings" element={<BookingsPage />} />
