@@ -3,6 +3,8 @@ import MainLayout from "@/components/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Import Alert components
+import { Terminal } from "lucide-react"; // Import Terminal icon
 import {
   ResponsiveContainer,
   PieChart,
@@ -16,20 +18,61 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import React, { useState, useEffect } from "react"; // Import useState and useEffect
+import { callGSheetProxy } from "@/lib/gsheets"; // Import callGSheetProxy
+import { toast } from "sonner"; // Import toast
 
 const DashboardPage = () => {
   const currentYear = new Date().getFullYear();
   const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
 
-  // Donut Chart Data
-  const activityData = [
-    { name: 'Airbnb', value: 400, color: '#2563eb' }, // blue-600
-    { name: 'Booking', value: 300, color: '#dc2626' }, // red-600
-    { name: 'Abritel', value: 200, color: '#d97706' }, // yellow-600
-    { name: 'Hello Keys', value: 100, color: '#16a34a' }, // green-600
-  ];
+  const [activityData, setActivityData] = useState([
+    { name: 'Airbnb', value: 0, color: '#2563eb' }, // blue-600
+    { name: 'Booking', value: 0, color: '#dc2626' }, // red-600
+    { name: 'Abritel', value: 0, color: '#d97706' }, // yellow-600
+    { name: 'Hello Keys', value: 0, color: '#16a34a' }, // green-600
+    { name: 'Proprio', value: 0, color: '#4f46e5' }, // indigo-600 for PROPRIO
+  ]);
+  const [loadingActivityData, setLoadingActivityData] = useState(true);
+  const [activityDataError, setActivityDataError] = useState<string | null>(null);
 
-  // Monthly Financial Data for Line Chart
+  useEffect(() => {
+    const fetchActivityData = async () => {
+      setLoadingActivityData(true);
+      setActivityDataError(null);
+      try {
+        // Fetch values from DG2, DH2, DI2, DJ2, DK2
+        const data = await callGSheetProxy({ action: 'read_sheet', range: 'DG2:DK2' });
+        console.log("DEBUG (DashboardPage): Fetched activity data from GSheet:", data);
+
+        if (data && data.length > 0 && data[0].length >= 5) {
+          const [bookingValue, airbnbValue, abritelValue, helloKeysValue, proprioValue] = data[0].map(Number);
+
+          setActivityData([
+            { name: 'Airbnb', value: isNaN(airbnbValue) ? 0 : airbnbValue, color: '#2563eb' },
+            { name: 'Booking', value: isNaN(bookingValue) ? 0 : bookingValue, color: '#dc2626' },
+            { name: 'Abritel', value: isNaN(abritelValue) ? 0 : abritelValue, color: '#d97706' },
+            { name: 'Hello Keys', value: isNaN(helloKeysValue) ? 0 : helloKeysValue, color: '#16a34a' },
+            { name: 'Proprio', value: isNaN(proprioValue) ? 0 : proprioValue, color: '#4f46e5' },
+          ]);
+          toast.success("Données d'activité de location mises à jour !");
+        } else {
+          setActivityDataError("Format de données inattendu pour l'activité de location.");
+          toast.error("Erreur: Format de données inattendu pour l'activité de location.");
+        }
+      } catch (err: any) {
+        setActivityDataError(`Erreur lors du chargement des données d'activité : ${err.message}`);
+        toast.error(`Erreur: ${err.message}`);
+        console.error("Error fetching activity data:", err);
+      } finally {
+        setLoadingActivityData(false);
+      }
+    };
+
+    fetchActivityData();
+  }, []); // Empty dependency array means this runs once on mount
+
+  // Monthly Financial Data for Line Chart (kept as hardcoded for now)
   const monthlyFinancialData = [
     { name: 'Jan', montantVerse: 2500, frais: 500, benef: 2000, ca: 3000 },
     { name: 'Fév', montantVerse: 2800, frais: 550, benef: 2250, ca: 3350 },
@@ -177,35 +220,47 @@ const DashboardPage = () => {
               <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center h-full">
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart isAnimationActive={true}> {/* Animation active */}
-                  <Pie
-                    data={activityData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    paddingAngle={5}
-                    dataKey="value"
-                    animationDuration={1000} // Durée de l'animation
-                    animationEasing="ease-in-out" // Type d'effet
-                  >
-                    {activityData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+              {loadingActivityData ? (
+                <p className="text-gray-500">Chargement des données d'activité...</p>
+              ) : activityDataError ? (
+                <Alert variant="destructive">
+                  <Terminal className="h-4 w-4" />
+                  <AlertTitle>Erreur de chargement</AlertTitle>
+                  <AlertDescription>{activityDataError}</AlertDescription>
+                </Alert>
+              ) : (
+                <>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart isAnimationActive={true}>
+                      <Pie
+                        data={activityData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        paddingAngle={5}
+                        dataKey="value"
+                        animationDuration={1000}
+                        animationEasing="ease-in-out"
+                      >
+                        {activityData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="text-sm space-y-1 mt-4">
+                    {activityData.map((item) => (
+                      <div key={item.name} className="flex items-center">
+                        <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: item.color }}></span>
+                        {item.name}
+                      </div>
                     ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="text-sm space-y-1 mt-4">
-                {activityData.map((item) => (
-                  <div key={item.name} className="flex items-center">
-                    <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: item.color }}></span>
-                    {item.name}
                   </div>
-                ))}
-              </div>
+                </>
+              )}
               <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400 mt-4">Voir mes réservations -&gt;</Button>
             </CardContent>
           </Card>
@@ -217,7 +272,7 @@ const DashboardPage = () => {
             </CardHeader>
             <CardContent className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={monthlyFinancialData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}> {/* Animation active */}
+                <LineChart data={monthlyFinancialData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
                   <CartesianGrid strokeDasharray="1 1" className="stroke-gray-200 dark:stroke-gray-700" />
                   <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                   <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
@@ -244,7 +299,7 @@ const DashboardPage = () => {
             </CardHeader>
             <CardContent className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={reservationPerMonthData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}> {/* Animation active */}
+                <LineChart data={reservationPerMonthData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
                   <CartesianGrid strokeDasharray="1 1" className="stroke-gray-200 dark:stroke-gray-700" />
                   <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                   <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
@@ -267,8 +322,8 @@ const DashboardPage = () => {
             </CardHeader>
             <CardContent className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={occupationRateData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}> {/* Animation active */}
-                  <CartesianGrid strokeDasharray="1 1" className="stroke-gray-200 dark:stroke-gray-700" />
+                <LineChart data={occupationRateData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
+                  <CartesianGrid strokeDashArray="1 1" className="stroke-gray-200 dark:stroke-gray-700" />
                   <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                   <YAxis unit="%" className="text-sm text-gray-600 dark:text-gray-400" />
                   <Tooltip 
