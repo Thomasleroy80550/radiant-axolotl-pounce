@@ -160,14 +160,12 @@ const BookingPlanningGrid: React.FC = () => {
                 .map((reservation) => {
                   const checkIn = parseISO(reservation.check_in_date);
                   const checkOut = parseISO(reservation.check_out_date); // This is the day *after* the last night
+                  const lastNight = addDays(checkOut, -1); // The actual last night of the stay
 
                   const monthStart = startOfMonth(currentMonth);
                   const monthEnd = endOfMonth(currentMonth);
 
                   // Determine the effective visible start and end of the reservation bar within the current month
-                  // The bar should end on the *last night* of the stay, which is checkOut - 1 day
-                  const lastNight = addDays(checkOut, -1);
-
                   const visibleCheckIn = checkIn < monthStart ? monthStart : checkIn;
                   const visibleLastNight = lastNight > monthEnd ? monthEnd : lastNight;
 
@@ -190,24 +188,32 @@ const BookingPlanningGrid: React.FC = () => {
 
                   const isOriginalCheckInVisible = isSameDay(checkIn, visibleCheckIn);
                   const isOriginalLastNightVisible = isSameDay(lastNight, visibleLastNight);
-                  const isSingleDayBooking = isSameDay(checkIn, lastNight);
+                  const isSingleNightBooking = isSameDay(checkIn, lastNight); // True if it's a 1-night stay
 
-                  if (isSingleDayBooking) {
-                    // For single-day bookings, center the bar and make it half width, fully rounded
-                    barLeft += halfDayWidth / 2;
-                    barWidth = dayCellWidth - halfDayWidth;
+                  if (isSingleNightBooking) {
+                    // For single-night bookings, it's a half-day bar centered in the cell
+                    barLeft += dayCellWidth / 4; // Shift right by 1/4 of cell width
+                    barWidth = dayCellWidth / 2; // Make it half the cell width
                     barBorderClasses = ' rounded-full';
                   } else {
-                    // Multi-day booking adjustments
+                    // For multi-night bookings
                     if (isOriginalCheckInVisible) {
-                      barLeft += halfDayWidth; // Start from mid-day
-                      barWidth -= halfDayWidth;
+                      barLeft += halfDayWidth; // Shift start to mid-day
+                      barWidth -= halfDayWidth; // Reduce width from left
                       barBorderClasses += ' rounded-l-full';
                     }
                     if (isOriginalLastNightVisible) {
-                      barWidth -= halfDayWidth; // End mid-day
+                      barWidth -= halfDayWidth; // Reduce width from right
                       barBorderClasses += ' rounded-r-full';
                     }
+                  }
+
+                  // If the reservation spans across months, ensure no rounding on the "cut" side
+                  if (!isOriginalCheckInVisible) { // Starts before current month
+                    barBorderClasses = barBorderClasses.replace(' rounded-l-full', '');
+                  }
+                  if (!isOriginalLastNightVisible) { // Ends after current month
+                    barBorderClasses = barBorderClasses.replace(' rounded-r-full', '');
                   }
 
                   const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
@@ -225,7 +231,7 @@ const BookingPlanningGrid: React.FC = () => {
                         marginTop: '2px', // Small margin from the top of the grid row
                         marginBottom: '2px', // Small margin from the bottom of the grid row
                       }}
-                      title={`${reservation.guest_name} (${channelInfo.name}, ${reservation.status}) - Du ${format(checkIn, 'dd/MM', { locale: fr })} au ${format(addDays(checkOut, -1), 'dd/MM', { locale: fr })} (Départ le ${format(checkOut, 'dd/MM', { locale: fr })})`}
+                      title={`${reservation.guest_name} (${channelInfo.name}, ${reservation.status}) - Du ${format(checkIn, 'dd/MM/yyyy', { locale: fr })} au ${format(lastNight, 'dd/MM/yyyy', { locale: fr })} (Départ le ${format(checkOut, 'dd/MM/yyyy', { locale: fr })})`}
                     >
                       <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
                       <span className="mr-1">€ {numberOfNights}</span>
