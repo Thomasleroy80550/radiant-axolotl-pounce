@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle,
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { fetchKrossbookingReservations, fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask } from '@/lib/krossbooking'; // Import fetchKrossbookingReservations and KrossbookingHousekeepingTask
-import { Tooltip, TooltipContent, TooltipTrigger } => '@/components/ui/tooltip'; // Import Tooltip components
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'; // Import Tooltip components
 
 interface KrossbookingReservation {
   id: string;
