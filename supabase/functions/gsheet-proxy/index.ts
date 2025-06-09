@@ -13,7 +13,7 @@ async function getGoogleAccessToken(): Promise<string> {
   const GOOGLE_PRIVATE_KEY = Deno.env.get('GOOGLE_PRIVATE_KEY')?.replace(/\\n/g, '\n');
   
   if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY) {
-    throw new Error("Missing Google Sheets API credentials in environment variables.");
+    throw new Error("Missing Google Sheets API credentials in environment variables. Please ensure GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY are set as Supabase secrets.");
   }
 
   const header = {
@@ -23,15 +23,12 @@ async function getGoogleAccessToken(): Promise<string> {
 
   const payload = {
     iss: GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    scope: "https://www.googleapis.com/auth/spreadsheets",
+    scope: "https://www.googleapis.com/auth/spreadsheets.readonly", // Changed scope to read-only for client access
     aud: "https://oauth2.googleapis.com/token",
     exp: getNumericDate(60 * 60), // 1 hour expiration
     iat: getNumericDate(new Date()),
   };
 
-  // The private key needs to be in JWK format or a CryptoKey.
-  // For simplicity, we'll use the raw private key string with `create` which expects a string.
-  // In a production environment, you might want to parse this into a CryptoKey for better security.
   const jwt = await create(header, payload, GOOGLE_PRIVATE_KEY);
 
   const response = await fetch("https://oauth2.googleapis.com/token", {
@@ -80,25 +77,23 @@ serve(async (req) => {
       });
     }
 
-    // Check if the user is an admin
-    const { data: profile, error: profileError } = await supabaseClient
+    // Fetch the user's profile to get their specific Google Sheet ID and tab
+    const { data: userProfile, error: profileError } = await supabaseClient
       .from('profiles')
-      .select('role')
+      .select('google_sheet_id, google_sheet_tab')
       .eq('id', user.id)
       .single();
 
-    if (profileError || profile?.role !== 'admin') {
-      console.warn(`Access denied for user ${user.id}. Role: ${profile?.role}`);
-      return new Response(JSON.stringify({ error: "Forbidden: Admin access required." }), {
-        status: 403,
+    if (profileError || !userProfile || !userProfile.google_sheet_id) {
+      console.warn(`User ${user.id} does not have a Google Sheet ID configured or profile error:`, profileError?.message);
+      return new Response(JSON.stringify({ error: "Google Sheet ID not configured for this user. Please configure it in your profile." }), {
+        status: 403, // Forbidden
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
 
-    const GOOGLE_SHEET_ID = Deno.env.get('GOOGLE_SHEET_ID');
-    if (!GOOGLE_SHEET_ID) {
-      throw new Error("Missing GOOGLE_SHEET_ID in environment variables.");
-    }
+    const GOOGLE_SHEET_ID = userProfile.google_sheet_id;
+    const GOOGLE_SHEET_TAB = userProfile.google_sheet_tab || 'COUNTER'; // Default to 'COUNTER' if not set
 
     const googleAccessToken = await getGoogleAccessToken();
 
@@ -109,8 +104,13 @@ serve(async (req) => {
 
     switch (action) {
       case 'read_sheet':
-        const range = params.range || 'Sheet1!A1:Z100';
-        const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEET_ID}/values/${range}`;
+        // Ensure the range is always scoped to the user's configured tab
+        const requestedRange = params.range && typeof params.range === 'string' ? params.range : 'A:Z';
+        const finalRange = `${GOOGLE_SHEET_TAB}!${requestedRange.startsWith(GOOGLE_SHEET_TAB + '!') ? requestedRange.substring(GOOGLE_SHEET_TAB.length + 1) : requestedRange}`;
+        
+        console.log(`Attempting to read from Google Sheet ID: ${GOOGLE_SHEET_ID}, Range: ${finalRange}`);
+
+        const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEET_ID}/values/${finalRange}`;
         const readResponse = await fetch(readUrl, {
           method: 'GET',
           headers: {
@@ -129,7 +129,23 @@ serve(async (req) => {
         break;
 
       case 'write_sheet':
-        const updateRange = params.range || 'Sheet1!A1';
+        // For security, writing is only allowed if the user is an admin.
+        // This part remains unchanged from previous admin-only logic, but now it's explicit.
+        const { data: adminProfile, error: adminProfileError } = await supabaseClient
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        if (adminProfileError || adminProfile?.role !== 'admin') {
+          console.warn(`Write access denied for user ${user.id}. Role: ${adminProfile?.role}`);
+          return new Response(JSON.stringify({ error: "Forbidden: Write access requires admin role." }), {
+            status: 403,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders },
+          });
+        }
+
+        const updateRange = params.range || 'Sheet1!A1'; // Default for admin writes
         const values = params.values;
         if (!values || !Array.isArray(values)) {
           throw new Error("Invalid 'values' provided for write_sheet action.");
