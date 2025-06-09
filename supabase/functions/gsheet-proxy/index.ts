@@ -10,8 +10,19 @@ const corsHeaders = {
 // Function to get Google Sheets API access token using JWT
 async function getGoogleAccessToken(): Promise<string> {
   const GOOGLE_SERVICE_ACCOUNT_EMAIL = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_EMAIL');
-  const GOOGLE_PRIVATE_KEY = Deno.env.get('GOOGLE_PRIVATE_KEY')?.replace(/\\n/g, '\n');
+  const rawPrivateKey = Deno.env.get('GOOGLE_PRIVATE_KEY');
+  // Ensure newlines are correctly interpreted. If Supabase UI already handles them,
+  // this .replace() will do nothing, which is fine. If it escapes them, this fixes it.
+  const GOOGLE_PRIVATE_KEY = rawPrivateKey?.replace(/\\n/g, '\n');
   
+  console.log("DEBUG: GOOGLE_SERVICE_ACCOUNT_EMAIL:", GOOGLE_SERVICE_ACCOUNT_EMAIL);
+  console.log("DEBUG: Raw GOOGLE_PRIVATE_KEY (first 50 chars):", rawPrivateKey?.substring(0, 50) + '...');
+  console.log("DEBUG: Processed GOOGLE_PRIVATE_KEY (first 50 chars):", GOOGLE_PRIVATE_KEY?.substring(0, 50) + '...');
+  console.log("DEBUG: Processed GOOGLE_PRIVATE_KEY length:", GOOGLE_PRIVATE_KEY?.length);
+  console.log("DEBUG: Processed GOOGLE_PRIVATE_KEY contains BEGIN:", GOOGLE_PRIVATE_KEY?.includes('-----BEGIN PRIVATE KEY-----'));
+  console.log("DEBUG: Processed GOOGLE_PRIVATE_KEY contains END:", GOOGLE_PRIVATE_KEY?.includes('-----END PRIVATE KEY-----'));
+  console.log("DEBUG: Processed GOOGLE_PRIVATE_KEY contains newlines:", GOOGLE_PRIVATE_KEY?.includes('\n'));
+
   if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY) {
     throw new Error("Missing Google Sheets API credentials in environment variables. Please ensure GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY are set as Supabase secrets.");
   }
@@ -23,36 +34,43 @@ async function getGoogleAccessToken(): Promise<string> {
 
   const payload = {
     iss: GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    scope: "https://www.googleapis.com/auth/spreadsheets.readonly", // Changed scope to read-only for client access
+    scope: "https://www.googleapis.com/auth/spreadsheets.readonly",
     aud: "https://oauth2.googleapis.com/token",
     exp: getNumericDate(60 * 60), // 1 hour expiration
     iat: getNumericDate(new Date()),
   };
 
-  const jwt = await create(header, payload, GOOGLE_PRIVATE_KEY);
+  try {
+    const jwt = await create(header, payload, GOOGLE_PRIVATE_KEY);
+    console.log("DEBUG: JWT created successfully.");
 
-  const response = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: jwt,
-    }).toString(),
-  });
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        assertion: jwt,
+      }).toString(),
+    });
 
-  if (!response.ok) {
-    const errorBody = await response.text();
-    console.error("Failed to get Google Access Token:", response.status, errorBody);
-    throw new Error(`Failed to get Google Access Token: ${response.statusText} - ${errorBody}`);
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error("Google OAuth Token API Error:", response.status, errorBody);
+      throw new Error(`Failed to get Google Access Token: ${response.statusText} - ${errorBody}`);
+    }
+
+    const data = await response.json();
+    if (!data.access_token) {
+      throw new Error("Access token not found in Google response.");
+    }
+    console.log("DEBUG: Google Access Token obtained successfully.");
+    return data.access_token;
+  } catch (e: any) {
+    console.error("DEBUG: Error during JWT creation or token fetching:", e.message);
+    throw e; // Re-throw to be caught by the main serve block
   }
-
-  const data = await response.json();
-  if (!data.access_token) {
-    throw new Error("Access token not found in Google response.");
-  }
-  return data.access_token;
 }
 
 serve(async (req) => {
