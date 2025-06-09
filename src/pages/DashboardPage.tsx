@@ -178,7 +178,7 @@ const DashboardPage = () => {
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center h-full">
               <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
+                <PieChart isAnimationActive={true}> {/* Animation active */}
                   <Pie
                     data={activityData}
                     cx="50%"
@@ -188,6 +188,8 @@ const DashboardPage = () => {
                     fill="#8884d8"
                     paddingAngle={5}
                     dataKey="value"
+                    animationDuration={1000} // Durée de l'animation
+                    animationEasing="ease-in-out" // Type d'effet
                   >
                     {activityData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -215,8 +217,8 @@ const DashboardPage = () => {
             </CardHeader>
             <CardContent className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={monthlyFinancialData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="1 1" className="stroke-gray-200 dark:stroke-gray-700" /> {/* More subtle grid */}
+                <LineChart data={monthlyFinancialData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}> {/* Animation active */}
+                  <CartesianGrid strokeDasharray="1 1" className="stroke-gray-200 dark:stroke-gray-700" />
                   <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                   <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
                   <Tooltip 
@@ -226,10 +228,10 @@ const DashboardPage = () => {
                     formatter={(value: number) => `${value}€`}
                   />
                   <Legend />
-                  <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} /> {/* No activeDot, custom stroke */}
-                  <Line type="monotone" dataKey="montantVerse" stroke="hsl(var(--secondary))" name="Montant Versé" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="benef" stroke="#22c55e" name="Bénéfice" strokeWidth={2} dot={false} /> {/* Green-500 for benefit */}
+                  <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                  <Line type="monotone" dataKey="montantVerse" stroke="hsl(var(--secondary))" name="Montant Versé" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                  <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                  <Line type="monotone" dataKey="benef" stroke="#22c55e" name="Bénéfice" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
@@ -242,8 +244,8 @@ const DashboardPage = () => {
             </CardHeader>
             <CardContent className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={reservationPerMonthData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="1 1" className="stroke-gray-200 dark:stroke-gray-700" /> {/* More subtle grid */}
+                <LineChart data={reservationPerMonthData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}> {/* Animation active */}
+                  <CartesianGrid strokeDasharray="1 1" className="stroke-gray-200 dark:stroke-gray-700" />
                   <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                   <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
                   <Tooltip 
@@ -252,7 +254,7 @@ const DashboardPage = () => {
                     itemStyle={{ color: 'hsl(var(--foreground))' }}
                   />
                   <Legend />
-                  <Line type="monotone" dataKey="reservations" stroke="hsl(var(--accent))" name="Réservations" strokeWidth={2} dot={false} /> {/* No activeDot */}
+                  <Line type="monotone" dataKey="reservations" stroke="hsl(var(--accent))" name="Réservations" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
@@ -265,8 +267,8 @@ const DashboardPage = () => {
             </CardHeader>
             <CardContent className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={occupationRateData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="1 1" className="stroke-gray-200 dark:stroke-gray-700" /> {/* More subtle grid */}
+                <LineChart data={occupationRateData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}> {/* Animation active */}
+                  <CartesianGrid strokeDasharray="1 1" className="stroke-gray-200 dark:stroke-gray-700" />
                   <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                   <YAxis unit="%" className="text-sm text-gray-600 dark:text-gray-400" />
                   <Tooltip 
@@ -276,7 +278,7 @@ const DashboardPage = () => {
                     formatter={(value: number) => `${value}%`}
                   />
                   <Legend />
-                  <Line type="monotone" dataKey="occupation" stroke="hsl(var(--secondary))" name="Occupation" strokeWidth={2} dot={false} /> {/* No activeDot */}
+                  <Line type="monotone" dataKey="occupation" stroke="hsl(var(--secondary))" name="Occupation" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
