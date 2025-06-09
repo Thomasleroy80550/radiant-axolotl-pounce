@@ -128,7 +128,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           <div className="flex items-center space-x-2 sm:space-x-4"> {/* Reduced space-x for mobile */}
             <Button variant="outline" className="flex items-center">
               <Plus className="h-4 w-4" /> {/* Always show Plus icon */}
-              {!isMobile && <span className="ml-2">Actions rapides</span>} {/* Show text only on desktop */}
+              <span className="ml-2 hidden lg:inline-block">Actions rapides</span> {/* Show text only on large screens */}
             </Button>
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
@@ -141,12 +141,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     <AvatarImage src="/avatars/01.png" alt="Thomas" />
                     <AvatarFallback>TH</AvatarFallback>
                   </Avatar>
-                  {!isMobile && ( // Show name/role only on desktop
-                    <div className="flex flex-col items-start">
-                      <span className="text-sm font-medium">Thomas</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">Compte admin</span>
-                    </div>
-                  )}
+                  <div className="hidden lg:flex flex-col items-start"> {/* Show name/role only on large screens */}
+                    <span className="text-sm font-medium">Thomas</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Compte admin</span>
+                  </div>
                   <ChevronDown className="h-4 w-4 ml-2" />
                 </Button>
               </DropdownMenuTrigger>
