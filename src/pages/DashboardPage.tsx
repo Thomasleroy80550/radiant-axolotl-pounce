@@ -304,7 +304,7 @@ const DashboardPage = () => {
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col p-4"> {/* Removed md:justify-center here */}
+            <CardContent className="flex flex-col p-4">
               {loadingActivityData ? (
                 <p className="text-gray-500">Chargement des données d'activité...</p>
               ) : activityDataError ? (
@@ -315,17 +315,17 @@ const DashboardPage = () => {
                 </Alert>
               ) : (
                 <>
-                  {/* New wrapper for chart and legend */}
+                  {/* Wrapper div with fixed height for ResponsiveContainer */}
                   <div className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 w-full">
-                    <div className="w-full md:w-3/5" style={{ height: '300px' }}>
+                    <div className="w-full md:w-3/5" style={{ height: '280px' }}> {/* Reduced height slightly */}
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart isAnimationActive={true}>
                           <Pie
                             data={activityData}
                             cx="50%"
                             cy="50%"
-                            innerRadius={100}
-                            outerRadius={140}
+                            innerRadius={90} // Reduced inner radius
+                            outerRadius={120} // Reduced outer radius
                             fill="#8884d8"
                             paddingAngle={5}
                             dataKey="value"
@@ -349,7 +349,7 @@ const DashboardPage = () => {
                       ))}
                     </div>
                   </div>
-                  <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400 mt-4 md:self-end">Voir mes réservations -&gt;</Button>
+                  <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400 mt-4 md:mt-0 md:self-end">Voir mes réservations -&gt;</Button>
                 </>
               )}
             </CardContent>
