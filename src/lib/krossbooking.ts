@@ -88,10 +88,16 @@ async function callKrossbookingProxy(action: string, payload?: any): Promise<any
 /**
  * Fetches reservations from Krossbooking API via the Supabase Edge Function proxy.
  * @param roomId Optional: The ID of the room/property to fetch reservations for. If not provided, fetches all reservations.
+ * @param dateFrom Optional: Start date (yyyy-mm-dd) for filtering reservations.
+ * @param dateTo Optional: End date (yyyy-mm-dd) for filtering reservations.
  * @returns A promise that resolves to an array of KrossbookingReservation objects.
  */
-export async function fetchKrossbookingReservations(roomId?: string): Promise<KrossbookingReservation[]> {
-  const data = await callKrossbookingProxy('get_reservations', { id_room: roomId });
+export async function fetchKrossbookingReservations(roomId?: string, dateFrom?: string, dateTo?: string): Promise<KrossbookingReservation[]> {
+  const payload: any = { id_room: roomId };
+  if (dateFrom) payload.date_from = dateFrom;
+  if (dateTo) payload.date_to = dateTo;
+
+  const data = await callKrossbookingProxy('get_reservations', payload);
   
   if (Array.isArray(data)) {
     return data.map((res: any) => {
