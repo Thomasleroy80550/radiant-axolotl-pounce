@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { fetchKrossbookingReservations, fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask } from '@/lib/krossbooking';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils'; // Import cn utility for conditional classNames
 
 interface KrossbookingReservation {
   id: string;
@@ -218,17 +219,15 @@ const BookingPlanningGrid: React.FC = () => {
                   // Calculate the number of nights. If 0, it's a same-day arrival/departure.
                   const numberOfNights = differenceInDays(checkOut, checkIn);
 
-                  // For the bar, we want it to represent the *occupied nights*.
-                  // So, if check-in is April 7 and check-out is April 8 (1 night), the bar covers April 7.
-                  // If check-in is April 7 and check-out is April 7 (0 nights), it's a single-day event.
+                  // The bar visually spans from check-in day to check-out day (inclusive)
                   const barStartDate = checkIn;
-                  const barEndDate = numberOfNights > 0 ? subDays(checkOut, 1) : checkIn; // Bar ends on the last *occupied* night
+                  const barEndDate = checkOut; 
 
                   // Determine the effective visible start and end of the reservation bar within the current month
                   const visibleBarStart = max([barStartDate, monthStart]);
                   const visibleBarEnd = min([barEndDate, monthEnd]);
 
-                  // If reservation doesn't overlap with current month's occupied nights, don't render the bar
+                  // If reservation doesn't overlap with current month's visual span, don't render the bar
                   if (visibleBarStart > visibleBarEnd) {
                     return null;
                   }
@@ -244,17 +243,31 @@ const BookingPlanningGrid: React.FC = () => {
                   // Calculate left position: property column width + (start day index * day cell width)
                   const barLeft = propertyColumnWidth + (startIndex * dayCellWidth);
                   
-                  // Calculate width: (number of visible occupied days) * day cell width
-                  const numberOfVisibleOccupiedDays = differenceInDays(visibleBarEnd, visibleBarStart) + 1;
-                  const barWidth = (numberOfVisibleOccupiedDays * dayCellWidth);
+                  // Calculate width: (number of visible days covered by the bar) * day cell width
+                  const numberOfVisibleDaysCovered = differenceInDays(visibleBarEnd, visibleBarStart) + 1;
+                  const barWidth = (numberOfVisibleDaysCovered * dayCellWidth);
 
                   const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
+
+                  const isArrivalDayVisible = isSameDay(checkIn, visibleBarStart);
+                  const isDepartureDayVisible = isSameDay(checkOut, visibleBarEnd);
+                  const isSingleDayStay = numberOfNights === 0;
+
+                  const barClasses = cn(
+                    `absolute h-9 flex items-center justify-center text-xs font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm cursor-pointer hover:opacity-90 transition-opacity`,
+                    {
+                      'rounded-full': isSingleDayStay, // Full round for single day
+                      'rounded-l-full': isArrivalDayVisible && !isSingleDayStay, // Left round for multi-day arrival
+                      'rounded-r-full': isDepartureDayVisible && !isSingleDayStay, // Right round for multi-day departure
+                      // No rounding if it's a middle segment of a long reservation spanning across months
+                    }
+                  );
 
                   return (
                     <Tooltip key={reservation.id}>
                       <TooltipTrigger asChild>
                         <div
-                          className={`absolute h-9 flex items-center justify-center text-xs font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm cursor-pointer hover:opacity-90 transition-opacity rounded-full`}
+                          className={barClasses}
                           style={{
                             gridRow: '3', // Always on the third row (after two header rows)
                             left: `${barLeft}px`,
@@ -263,19 +276,19 @@ const BookingPlanningGrid: React.FC = () => {
                             marginTop: '2px', // Small margin from the top of the grid row
                             marginBottom: '2px', // Small margin from the bottom of the grid row
                             zIndex: 5, // Ensure bars are above background cells but below icons
+                            display: 'flex', // Ensure flexbox for icon positioning
+                            justifyContent: 'space-between', // Distribute items
+                            alignItems: 'center',
+                            padding: '0 4px', // Small padding to keep icons from edge
                           }}
                         >
                           {/* Render LogIn icon at the start of the bar if it's the check-in day */}
-                          {isSameDay(checkIn, visibleBarStart) && (
-                            <LogIn className="h-4 w-4 ml-1 mr-1" />
-                          )}
-
+                          {isArrivalDayVisible && !isSingleDayStay && <LogIn className="h-4 w-4 flex-shrink-0" />}
+                          
                           {/* Render Sparkles icon for single-day reservations (arrival and departure on same day) */}
-                          {numberOfNights === 0 && isSameDay(checkIn, checkOut) && (
-                            <Sparkles className="h-4 w-4 mx-1" />
-                          )}
+                          {isSingleDayStay && <Sparkles className="h-4 w-4 flex-shrink-0" />}
 
-                          <span className="px-1 flex-grow text-center">
+                          <span className="flex-grow text-center px-1 truncate">
                             <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
                             <span className="mr-1">€ {numberOfNights}</span>
                             <span className="mx-1">|</span>
@@ -283,13 +296,7 @@ const BookingPlanningGrid: React.FC = () => {
                           </span>
 
                           {/* Render LogOut icon at the end of the bar if it's the check-out day (or same day for 0 nights) */}
-                          {isSameDay(checkOut, addDays(visibleBarEnd, 1)) && numberOfNights > 0 && (
-                            <LogOut className="h-4 w-4 ml-1 mr-1" />
-                          )}
-                          {numberOfNights === 0 && isSameDay(checkIn, checkOut) && (
-                            // For 0-night stays, the Sparkles icon already indicates the movement, no need for LogOut
-                            null
-                          )}
+                          {isDepartureDayVisible && !isSingleDayStay && <LogOut className="h-4 w-4 flex-shrink-0" />}
                         </div>
                       </TooltipTrigger>
                       <TooltipContent className="p-2 text-sm">
