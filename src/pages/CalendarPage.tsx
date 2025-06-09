@@ -11,6 +11,7 @@ import { ChevronLeft, ChevronRight, Home } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { fetchKrossbookingReservations } from '@/lib/krossbooking';
+import { getUserRooms, UserRoom } from '@/lib/user-room-api'; // Import user room API
 
 interface KrossbookingReservation {
   id: string;
@@ -25,35 +26,44 @@ interface KrossbookingReservation {
   channel_identifier?: string;
 }
 
-const defaultRoomId = '36';
-const defaultRoomName = 'Ma Chambre par défaut (2c)';
-
 const CalendarPage: React.FC = () => {
   const isMobile = useIsMobile();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [userRooms, setUserRooms] = useState<UserRoom[]>([]); // State to store user's rooms
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadReservations = async () => {
+    const loadData = async () => {
       setLoading(true);
       setError(null);
       try {
-        console.log(`DEBUG: Fetching reservations for single room ID: ${defaultRoomId}`);
-        const fetchedReservations = await fetchKrossbookingReservations(defaultRoomId);
+        const fetchedUserRooms = await getUserRooms();
+        setUserRooms(fetchedUserRooms);
+
+        const roomIds = fetchedUserRooms.map(room => room.room_id);
+
+        if (roomIds.length === 0) {
+          setReservations([]);
+          setLoading(false);
+          return;
+        }
+
+        console.log(`DEBUG: Fetching reservations for room IDs: ${roomIds.join(', ')}`);
+        const fetchedReservations = await fetchKrossbookingReservations(roomIds);
         setReservations(fetchedReservations);
-        console.log("DEBUG: Fetched reservations for default room:", fetchedReservations); 
+        console.log("DEBUG: Fetched reservations for user rooms:", fetchedReservations); 
       } catch (err: any) {
         setError(`Erreur lors du chargement des réservations : ${err.message}`);
-        console.error("DEBUG: Error in loadReservations:", err);
+        console.error("DEBUG: Error in loadData for CalendarPage:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    loadReservations();
-  }, []);
+    loadData();
+  }, []); // Empty dependency array means this runs once on mount
 
   const daysInMonth = useMemo(() => {
     const start = startOfMonth(currentMonth);
