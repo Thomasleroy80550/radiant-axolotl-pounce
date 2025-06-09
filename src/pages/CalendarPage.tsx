@@ -1,14 +1,99 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import BookingPlanningGrid from '@/components/BookingPlanningGrid'; // Import the new component
+import MobileBookingList from '@/components/MobileBookingList'; // Import the new mobile list component
+import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile hook
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addDays, differenceInDays } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight, Home } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Terminal } from 'lucide-react';
+import { fetchKrossbookingReservations } from '@/lib/krossbooking';
+
+interface KrossbookingReservation {
+  id: string;
+  guest_name: string;
+  property_name: string;
+  check_in_date: string;
+  check_out_date: string;
+  status: string;
+  amount: string;
+  cod_channel?: string;
+  ota_id?: string;
+  channel_identifier?: string;
+}
+
+const defaultRoomId = '36';
+const defaultRoomName = 'Ma Chambre par défaut (2c)';
 
 const CalendarPage: React.FC = () => {
+  const isMobile = useIsMobile();
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadReservations = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        console.log(`DEBUG: Fetching reservations for single room ID: ${defaultRoomId}`);
+        const fetchedReservations = await fetchKrossbookingReservations(defaultRoomId);
+        setReservations(fetchedReservations);
+        console.log("DEBUG: Fetched reservations for default room:", fetchedReservations); 
+      } catch (err: any) {
+        setError(`Erreur lors du chargement des réservations : ${err.message}`);
+        console.error("DEBUG: Error in loadReservations:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadReservations();
+  }, []);
+
+  const daysInMonth = useMemo(() => {
+    const start = startOfMonth(currentMonth);
+    const end = endOfMonth(currentMonth);
+    return eachDayOfInterval({ start, end });
+  }, [currentMonth]);
+
+  const goToPreviousMonth = () => {
+    setCurrentMonth(subMonths(currentMonth, 1));
+  };
+
+  const goToNextMonth = () => {
+    setCurrentMonth(addMonths(currentMonth, 1));
+  };
+
+  // Filter reservations for the current month to pass to MobileBookingList
+  const currentMonthReservations = useMemo(() => {
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
+    return reservations.filter(res => {
+      const checkIn = parseISO(res.check_in_date);
+      const checkOut = parseISO(res.check_out_date);
+      // A reservation is relevant if it starts or ends within the current month, or spans across it
+      return (
+        (checkIn <= monthEnd && checkOut >= monthStart)
+      );
+    }).sort((a, b) => parseISO(a.check_in_date).getTime() - parseISO(b.check_in_date).getTime());
+  }, [reservations, currentMonth]);
+
+
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Calendrier</h1>
-        <BookingPlanningGrid /> {/* Use the new planning grid component */}
+        
+        {isMobile ? (
+          <MobileBookingList reservations={currentMonthReservations} loading={loading} error={error} />
+        ) : (
+          <BookingPlanningGrid />
+        )}
         
         {/* You can keep or remove the "Événements à venir" section as it's separate from the grid */}
         <Card className="shadow-md mt-6">

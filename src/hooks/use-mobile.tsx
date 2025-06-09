@@ -10,10 +10,12 @@ export function useIsMobile() {
   React.useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
     const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+      const newState = window.innerWidth < MOBILE_BREAKPOINT;
+      setIsMobile(newState);
+      console.log(`useIsMobile: isMobile detected as ${newState} (width: ${window.innerWidth}px)`); // Added log
     };
     mql.addEventListener("change", onChange);
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    onChange(); // Initial check
     return () => mql.removeEventListener("change", onChange);
   }, []);
 
