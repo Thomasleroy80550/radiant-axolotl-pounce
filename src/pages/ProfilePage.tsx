@@ -6,25 +6,43 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, PlusCircle, Trash2, Home } from 'lucide-react';
+import { Terminal, PlusCircle, Trash2, Home, User as UserIcon, Mail } from 'lucide-react'; // Renamed User to UserIcon to avoid conflict
 import { addUserRoom, getUserRooms, deleteUserRoom, UserRoom } from '@/lib/user-room-api';
+import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api'; // Import profile API
 import { toast } from 'sonner';
+import { useSession } from '@/components/SessionContextProvider'; // Import useSession
 
 const ProfilePage: React.FC = () => {
+  const { session } = useSession(); // Get session to access user email
   const [rooms, setRooms] = useState<UserRoom[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [newRoomId, setNewRoomId] = useState<string>('');
   const [newRoomName, setNewRoomName] = useState<string>('');
 
-  const fetchRooms = async () => {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [firstName, setFirstName] = useState<string>('');
+  const [lastName, setLastName] = useState<string>('');
+  const [googleSheetId, setGoogleSheetId] = useState<string>('');
+  const [googleSheetTab, setGoogleSheetTab] = useState<string>('COUNTER'); // Default tab name
+
+  const fetchProfileAndRooms = async () => {
     setLoading(true);
     setError(null);
     try {
+      const fetchedProfile = await getProfile();
+      setProfile(fetchedProfile);
+      if (fetchedProfile) {
+        setFirstName(fetchedProfile.first_name || '');
+        setLastName(fetchedProfile.last_name || '');
+        setGoogleSheetId(fetchedProfile.google_sheet_id || '');
+        setGoogleSheetTab(fetchedProfile.google_sheet_tab || 'COUNTER');
+      }
+
       const fetchedRooms = await getUserRooms();
       setRooms(fetchedRooms);
     } catch (err: any) {
-      setError(`Erreur lors du chargement des chambres : ${err.message}`);
+      setError(`Erreur lors du chargement des données : ${err.message}`);
       toast.error(`Erreur: ${err.message}`);
     } finally {
       setLoading(false);
@@ -32,8 +50,27 @@ const ProfilePage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchRooms();
+    fetchProfileAndRooms();
   }, []);
+
+  const handleUpdateProfile = async () => {
+    setLoading(true);
+    try {
+      await updateProfile({
+        first_name: firstName,
+        last_name: lastName,
+        google_sheet_id: googleSheetId,
+        google_sheet_tab: googleSheetTab,
+      });
+      toast.success("Profil mis à jour avec succès !");
+      await fetchProfileAndRooms(); // Re-fetch to ensure state is consistent
+    } catch (err: any) {
+      setError(`Erreur lors de la mise à jour du profil : ${err.message}`);
+      toast.error(`Erreur: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAddRoom = async () => {
     if (!newRoomId.trim() || !newRoomName.trim()) {
@@ -46,7 +83,7 @@ const ProfilePage: React.FC = () => {
       toast.success("Chambre ajoutée avec succès !");
       setNewRoomId('');
       setNewRoomName('');
-      await fetchRooms(); // Refresh the list
+      await fetchProfileAndRooms(); // Refresh the list
     } catch (err: any) {
       setError(`Erreur lors de l'ajout de la chambre : ${err.message}`);
       toast.error(`Erreur: ${err.message}`);
@@ -63,7 +100,7 @@ const ProfilePage: React.FC = () => {
     try {
       await deleteUserRoom(id);
       toast.success("Chambre supprimée avec succès !");
-      await fetchRooms(); // Refresh the list
+      await fetchProfileAndRooms(); // Refresh the list
     } catch (err: any) {
       setError(`Erreur lors de la suppression de la chambre : ${err.message}`);
       toast.error(`Erreur: ${err.message}`);
@@ -85,6 +122,77 @@ const ProfilePage: React.FC = () => {
           </Alert>
         )}
 
+        {/* User Profile Section */}
+        <Card className="shadow-md mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Informations du Profil</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">Prénom</Label>
+                <Input
+                  id="firstName"
+                  type="text"
+                  placeholder="Votre prénom"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Nom</Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  placeholder="Votre nom"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={session?.user?.email || ''}
+                disabled // Email is read-only from Supabase Auth
+                className="bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="googleSheetId">ID du Google Sheet</Label>
+              <Input
+                id="googleSheetId"
+                type="text"
+                placeholder="Ex: 1ABC...xyz"
+                value={googleSheetId}
+                onChange={(e) => setGoogleSheetId(e.target.value)}
+                disabled={loading}
+              />
+              <p className="text-sm text-gray-500">L'ID se trouve dans l'URL de votre feuille Google (après '/d/' et avant '/edit').</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="googleSheetTab">Nom de l'onglet Google Sheet</Label>
+              <Input
+                id="googleSheetTab"
+                type="text"
+                placeholder="Ex: COUNTER"
+                value={googleSheetTab}
+                onChange={(e) => setGoogleSheetTab(e.target.value)}
+                disabled={loading}
+              />
+              <p className="text-sm text-gray-500">Le nom de l'onglet à lire (par défaut 'COUNTER').</p>
+            </div>
+            <Button onClick={handleUpdateProfile} disabled={loading}>
+              {loading ? 'Sauvegarde en cours...' : 'Mettre à jour le Profil'}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Add New Room Section */}
         <Card className="shadow-md mb-6">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Ajouter une Nouvelle Chambre</CardTitle>
@@ -121,6 +229,7 @@ const ProfilePage: React.FC = () => {
           </CardContent>
         </Card>
 
+        {/* Configured Rooms Section */}
         <Card className="shadow-md">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Mes Chambres Configurées</CardTitle>
