@@ -7,7 +7,7 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterv
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Home, CalendarDays, User, DollarSign } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } => '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { fetchKrossbookingReservations } from '@/lib/krossbooking';
 import { Calendar } from '@/components/ui/calendar';
@@ -143,9 +143,10 @@ const CalendarPage: React.FC = () => {
                     modifiers={{ booked: bookedDays }}
                     modifiersStyles={{
                       booked: {
-                        backgroundColor: 'hsl(var(--accent))', // Using accent color for booked days
-                        color: 'hsl(var(--accent-foreground))', // Using accent-foreground for text
-                        borderRadius: '0.25rem',
+                        backgroundColor: 'hsl(var(--primary) / 0.1)', // Light background using primary color
+                        border: '1px solid hsl(var(--primary))', // Border using primary color
+                        color: 'hsl(var(--foreground))', // Keep foreground text color
+                        borderRadius: '0.25rem', // Keep rounded corners for the day cell
                       },
                     }}
                     className="rounded-md border"
