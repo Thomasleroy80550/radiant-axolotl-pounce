@@ -41,21 +41,10 @@ async function getGoogleAccessToken(): Promise<string> {
   };
 
   try {
-    // Import the private key as a CryptoKey
-    const privateKey = await crypto.subtle.importKey(
-      "pkcs8", // Format for PEM private keys
-      new TextEncoder().encode(GOOGLE_PRIVATE_KEY), // Key data as Uint8Array
-      {
-        name: "RSASSA-PKCS1-v1_5", // Algorithm name for RS256
-        hash: "SHA-256",
-      },
-      false, // Not extractable
-      ["sign"] // Usage for signing
-    );
-    console.log("DEBUG: Private key imported successfully as CryptoKey.");
-
-    const jwt = await create(header, payload, privateKey); // Pass the CryptoKey
-    console.log("DEBUG: JWT created successfully.");
+    // Pass the GOOGLE_PRIVATE_KEY string directly to djwt.create
+    // djwt is capable of parsing PEM strings directly.
+    const jwt = await create(header, payload, GOOGLE_PRIVATE_KEY); 
+    console.log("DEBUG: JWT created successfully using direct PEM string.");
 
     const response = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
