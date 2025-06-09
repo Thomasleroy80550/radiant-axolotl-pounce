@@ -3,8 +3,8 @@ import MainLayout from "@/components/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Import Alert components
-import { Terminal } from "lucide-react"; // Import Terminal icon
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Terminal } from "lucide-react";
 import {
   ResponsiveContainer,
   PieChart,
@@ -18,9 +18,9 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import React, { useState, useEffect } from "react"; // Import useState and useEffect
-import { callGSheetProxy } from "@/lib/gsheets"; // Import callGSheetProxy
-import { toast } from "sonner"; // Import toast
+import React, { useState, useEffect } from "react";
+import { callGSheetProxy } from "@/lib/gsheets";
+import { toast } from "sonner";
 
 const DashboardPage = () => {
   const currentYear = new Date().getFullYear();
@@ -36,12 +36,21 @@ const DashboardPage = () => {
   const [loadingActivityData, setLoadingActivityData] = useState(true);
   const [activityDataError, setActivityDataError] = useState<string | null>(null);
 
+  const [financialData, setFinancialData] = useState({
+    venteAnnee: 0,
+    rentreeArgentAnnee: 0,
+    fraisAnnee: 0,
+    resultatAnnee: 0,
+    objectifPourcentage: 0, // Assuming this will also come from GSheet, or calculated
+  });
+  const [loadingFinancialData, setLoadingFinancialData] = useState(true);
+  const [financialDataError, setFinancialDataError] = useState<string | null>(null);
+
   useEffect(() => {
     const fetchActivityData = async () => {
       setLoadingActivityData(true);
       setActivityDataError(null);
       try {
-        // Fetch values from DG2, DH2, DI2, DJ2, DK2
         const data = await callGSheetProxy({ action: 'read_sheet', range: 'DG2:DK2' });
         console.log("DEBUG (DashboardPage): Fetched activity data from GSheet:", data);
 
@@ -69,7 +78,43 @@ const DashboardPage = () => {
       }
     };
 
+    const fetchFinancialData = async () => {
+      setLoadingFinancialData(true);
+      setFinancialDataError(null);
+      try {
+        // Fetch values from C2, D2, E2, F2
+        const data = await callGSheetProxy({ action: 'read_sheet', range: 'C2:F2' });
+        console.log("DEBUG (DashboardPage): Fetched financial data from GSheet:", data);
+
+        if (data && data.length > 0 && data[0].length >= 4) {
+          const [vente, rentree, frais, resultat] = data[0].map(Number);
+          
+          // Calculate objective percentage if 'resultat' and 'vente' are available
+          const calculatedObjective = (isNaN(resultat) || isNaN(vente) || vente === 0) ? 0 : (resultat / vente) * 100;
+
+          setFinancialData({
+            venteAnnee: isNaN(vente) ? 0 : vente,
+            rentreeArgentAnnee: isNaN(rentree) ? 0 : rentree,
+            fraisAnnee: isNaN(frais) ? 0 : frais,
+            resultatAnnee: isNaN(resultat) ? 0 : resultat,
+            objectifPourcentage: calculatedObjective,
+          });
+          toast.success("Données financières mises à jour !");
+        } else {
+          setFinancialDataError("Format de données inattendu pour le bilan financier.");
+          toast.error("Erreur: Format de données inattendu pour le bilan financier.");
+        }
+      } catch (err: any) {
+        setFinancialDataError(`Erreur lors du chargement des données financières : ${err.message}`);
+        toast.error(`Erreur: ${err.message}`);
+        console.error("Error fetching financial data:", err);
+      } finally {
+        setLoadingFinancialData(false);
+      }
+    };
+
     fetchActivityData();
+    fetchFinancialData();
   }, []); // Empty dependency array means this runs once on mount
 
   // Monthly Financial Data for Line Chart (kept as hardcoded for now)
@@ -143,34 +188,46 @@ const DashboardPage = () => {
               <CardTitle className="text-lg font-semibold">Bilan Financier</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-2xl font-bold text-green-600">22418.07€</p>
-                  <p className="text-sm text-gray-500">Vente sur l'année</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-orange-600">19202.82€</p>
-                  <p className="text-sm text-gray-500">Rentré d'argent sur l'année</p>
-                </div>
-              </div>
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-2xl font-bold text-red-600">6009.73€</p>
-                  <p className="text-sm text-gray-500">Frais de gestion sur l'année</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-green-600">13193.09€</p>
-                  <p className="text-sm text-gray-500">Résultats sur l'année</p>
-                </div>
-              </div>
-              <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Voir mes statistiques -&gt;</Button>
-              
-              <div className="space-y-2">
-                <p className="text-sm text-gray-700 dark:text-gray-300">Mon objectif</p>
-                <Progress value={53.77} className="h-2" />
-                <p className="text-xs text-gray-500">53.77%</p>
-                <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Modifier mon objectif -&gt;</Button>
-              </div>
+              {loadingFinancialData ? (
+                <p className="text-gray-500">Chargement des données financières...</p>
+              ) : financialDataError ? (
+                <Alert variant="destructive">
+                  <Terminal className="h-4 w-4" />
+                  <AlertTitle>Erreur de chargement</AlertTitle>
+                  <AlertDescription>{financialDataError}</AlertDescription>
+                </Alert>
+              ) : (
+                <>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-2xl font-bold text-green-600">{financialData.venteAnnee.toFixed(2)}€</p>
+                      <p className="text-sm text-gray-500">Vente sur l'année</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-orange-600">{financialData.rentreeArgentAnnee.toFixed(2)}€</p>
+                      <p className="text-sm text-gray-500">Rentré d'argent sur l'année</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-2xl font-bold text-red-600">{financialData.fraisAnnee.toFixed(2)}€</p>
+                      <p className="text-sm text-gray-500">Frais de gestion sur l'année</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-green-600">{financialData.resultatAnnee.toFixed(2)}€</p>
+                      <p className="text-sm text-gray-500">Résultats sur l'année</p>
+                    </div>
+                  </div>
+                  <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Voir mes statistiques -&gt;</Button>
+                  
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">Mon objectif</p>
+                    <Progress value={financialData.objectifPourcentage} className="h-2" />
+                    <p className="text-xs text-gray-500">{financialData.objectifPourcentage.toFixed(2)}%</p>
+                    <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Modifier mon objectif -&gt;</Button>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
