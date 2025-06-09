@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import BookingPlanningGrid from '@/components/BookingPlanningGrid';
-import { useIsMobile } from '@/hooks/use-mobile'; // Still useful for other mobile-specific UI if needed
+import MobileCalendarView from '@/components/MobileCalendarView'; // Import the new mobile view
+import { useIsMobile } from '@/hooks/use-mobile';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addDays, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -10,9 +11,9 @@ import { ChevronLeft, ChevronRight, Home, CalendarDays, User, DollarSign } from 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { fetchKrossbookingReservations } from '@/lib/krossbooking';
-import { Calendar } from '@/components/ui/calendar'; // Keep import for potential future use or if other parts rely on it
+import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
-import CustomCalendarDay from '@/components/CustomCalendarDay'; // Keep import for potential future use
+import CustomCalendarDay from '@/components/CustomCalendarDay';
 
 interface KrossbookingReservation {
   id: string;
@@ -41,10 +42,7 @@ const channelColors: { [key: string]: { name: string; bgColor: string; textColor
 };
 
 const CalendarPage: React.FC = () => {
-  // useIsMobile is still available if you need to conditionally render other elements
-  // const isMobile = useIsMobile(); 
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const isMobile = useIsMobile(); 
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,86 +67,9 @@ const CalendarPage: React.FC = () => {
     loadReservations();
   }, []);
 
-  // This useMemo is no longer strictly needed for CustomCalendarDay, but kept for reference
-  // or if you decide to re-introduce a different calendar view later.
-  const dayReservationSegments = useMemo(() => {
-    const map = new Map<string, { type: 'arrival' | 'departure' | 'middle' | 'single', channel: string }[]>();
-    reservations.forEach(res => {
-      const checkIn = parseISO(res.check_in_date);
-      const checkOut = parseISO(res.check_out_date); // This is the day *after* the last night
-
-      const numberOfNights = differenceInDays(checkOut, checkIn);
-
-      if (numberOfNights <= 0) { 
-        return; // Skip invalid reservations (e.g., check-out before or on check-in)
-      }
-
-      if (numberOfNights === 1) { // Single night stay
-        const dayKey = format(checkIn, 'yyyy-MM-dd');
-        const segmentsForDay = map.get(dayKey) || [];
-        segmentsForDay.push({
-          type: 'single', // New type for single-day bookings
-          channel: res.channel_identifier || 'UNKNOWN',
-        });
-        map.set(dayKey, segmentsForDay);
-      } else { // Multi-night stay
-        eachDayOfInterval({ start: checkIn, end: addDays(checkOut, -1) }).forEach(day => {
-          const dayKey = format(day, 'yyyy-MM-dd');
-          let type: 'arrival' | 'departure' | 'middle' | 'single';
-          if (isSameDay(day, checkIn)) {
-            type = 'arrival';
-          } else if (isSameDay(day, addDays(checkOut, -1))) { // Last night of the stay
-            type = 'departure';
-          } else {
-            type = 'middle';
-          }
-
-          const segmentsForDay = map.get(dayKey) || [];
-          segmentsForDay.push({
-            type: type,
-            channel: res.channel_identifier || 'UNKNOWN',
-          });
-          map.set(dayKey, segmentsForDay);
-        });
-      }
-    });
-    return map;
-  }, [reservations]);
-
-  const filteredReservations = useMemo(() => {
-    if (!selectedDate) {
-      const monthStart = startOfMonth(currentMonth);
-      const monthEnd = endOfMonth(currentMonth);
-      return reservations.filter(res => {
-        const checkIn = parseISO(res.check_in_date);
-        const checkOut = parseISO(res.check_out_date);
-        return (checkIn <= monthEnd && checkOut >= monthStart);
-      }).sort((a, b) => parseISO(a.check_in_date).getTime() - parseISO(b.check_in_date).getTime());
-    } else {
-      return reservations.filter(res => {
-        const checkIn = parseISO(res.check_in_date);
-        const checkOut = parseISO(res.check_out_date);
-        // A reservation is relevant if the selected date is between check-in (inclusive) and check-out (exclusive)
-        return selectedDate >= checkIn && selectedDate < checkOut;
-      }).sort((a, b) => parseISO(a.check_in_date).getTime() - parseISO(b.check_in_date).getTime());
-    }
-  }, [reservations, selectedDate, currentMonth]);
-
-  const getStatusVariant = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'confirmed':
-      case 'confirmée':
-        return 'default';
-      case 'pending':
-      case 'en attente':
-        return 'secondary';
-      case 'cancelled':
-      case 'annulée':
-        return 'destructive';
-      default:
-        return 'outline';
-    }
-  };
+  // The dayReservationSegments and filteredReservations useMemos are no longer needed here
+  // as MobileCalendarView will handle its own filtering based on its internal state.
+  // The detailed reservation list below the grid/calendar will also be handled by MobileCalendarView.
 
   return (
     <MainLayout>
@@ -166,66 +87,37 @@ const CalendarPage: React.FC = () => {
 
         {!loading && !error && (
           <>
-            {/* Always render BookingPlanningGrid */}
-            <BookingPlanningGrid />
+            {isMobile ? (
+              <MobileCalendarView 
+                reservations={reservations} 
+                loading={loading} 
+                error={error} 
+                channelColors={channelColors} 
+              />
+            ) : (
+              <BookingPlanningGrid />
+            )}
 
-            {/* You can keep the detailed reservation list below the grid if desired */}
+            {/* You can keep the 'Événements à venir' card here as it's generic */}
             <Card className="shadow-md mt-6">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold">
-                  Réservations pour {selectedDate ? format(selectedDate, 'dd MMMM yyyy', { locale: fr }) : 'le mois en cours'}
-                </CardTitle>
+                <CardTitle className="text-lg font-semibold">Événements à venir (Exemple)</CardTitle>
               </CardHeader>
               <CardContent>
-                {filteredReservations.length === 0 ? (
-                  <p className="text-gray-500">Aucune réservation trouvée pour cette période.</p>
-                ) : (
-                  <div className="space-y-4">
-                    {filteredReservations.map((booking) => {
-                      const channelInfo = channelColors[booking.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
-                      return (
-                        <Card key={booking.id} className="shadow-sm border border-gray-200 dark:border-gray-700 relative overflow-hidden">
-                          <div className={`absolute left-0 top-0 bottom-0 w-2 ${channelInfo.bgColor}`}></div> {/* Colored bar on the left */}
-                          <CardContent className="p-4 pl-6"> {/* Adjust padding to account for the bar */}
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center">
-                                <h3 className="font-bold text-md">{booking.guest_name}</h3>
-                              </div>
-                              <Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge>
-                            </div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                              <p className="flex items-center"><Home className="h-4 w-4 mr-2" /> {booking.property_name}</p>
-                              <p className="flex items-center"><CalendarDays className="h-4 w-4 mr-2" /> Du {format(parseISO(booking.check_in_date), 'dd/MM', { locale: fr })} au {format(parseISO(booking.check_out_date), 'dd/MM', { locale: fr })}</p>
-                              <p className="flex items-center"><DollarSign className="h-4 w-4 mr-2" /> {booking.amount} ({channelInfo.name})</p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                )}
+                <ul className="space-y-2">
+                  <li className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
+                    <p className="font-medium">15 juillet 2025 : Arrivée de M. Dupont</p>
+                    <p className="text-sm text-gray-500">Appartement Paris - 3 nuits</p>
+                  </li>
+                  <li className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
+                    <p className="font-medium">20 juillet 2025 : Départ de Mme. Martin</p>
+                    <p className="text-sm text-gray-500">Studio Nice</p>
+                  </li>
+                </ul>
               </CardContent>
             </Card>
           </>
         )}
-        
-        <Card className="shadow-md mt-6">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Événements à venir (Exemple)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              <li className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
-                <p className="font-medium">15 juillet 2025 : Arrivée de M. Dupont</p>
-                <p className="text-sm text-gray-500">Appartement Paris - 3 nuits</p>
-              </li>
-              <li className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
-                <p className="font-medium">20 juillet 2025 : Départ de Mme. Martin</p>
-                <p className="text-sm text-gray-500">Studio Nice</p>
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
       </div>
     </MainLayout>
   );
