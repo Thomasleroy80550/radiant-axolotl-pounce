@@ -22,7 +22,7 @@ interface KrossbookingReservation {
 }
 
 // Définir l'ID et le nom de la chambre par défaut à afficher
-const defaultRoomId = '36'; // Remplacez par l'ID de la chambre Krossbooking que vous souhaitez afficher
+const defaultRoomId = '62'; // Remplacez par l'ID de la chambre Krossbooking que vous souhaitez afficher
 const defaultRoomName = 'Ma Chambre par défaut (2c)'; // Nom affiché pour cette chambre
 
 // Mapping des codes de canal Krossbooking vers des noms et couleurs Tailwind CSS
