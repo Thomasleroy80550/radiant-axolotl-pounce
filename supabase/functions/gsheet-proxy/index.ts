@@ -145,7 +145,7 @@ serve(async (req) => {
         const requestedRange = params.range && typeof params.range === 'string' ? params.range : 'A:Z';
         const finalRange = `${GOOGLE_SHEET_TAB}!${requestedRange.startsWith(GOOGLE_SHEET_TAB + '!') ? requestedRange.substring(GOOGLE_SHEET_TAB.length + 1) : requestedRange}`;
         
-        console.log(`Attempting to read from Google Sheet ID: ${GOOGLE_SHEET_ID}, Range: ${finalRange}`);
+        console.log(`DEBUG (Edge Function): Tentative de lecture de Google Sheet ID: ${GOOGLE_SHEET_ID}, Plage: ${finalRange}`);
 
         const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEET_ID}/values/${finalRange}`;
         const readResponse = await fetch(readUrl, {
@@ -162,6 +162,7 @@ serve(async (req) => {
           throw new Error(`Failed to read sheet: ${readResponse.statusText} - ${errorBody}`);
         }
         const readData = await readResponse.json();
+        console.log("DEBUG (Edge Function): Données reçues de Google Sheets API:", readData.values); // Added log
         responseData = readData.values;
         break;
 
