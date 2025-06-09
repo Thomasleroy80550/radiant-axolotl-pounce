@@ -2,8 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import BookingPlanningGrid from '@/components/BookingPlanningGrid';
-import MobileCalendarView from '@/components/MobileCalendarView'; // Import the new mobile view
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile'; // Keep import for potential future use or other mobile-specific UI if needed
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addDays, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -11,9 +10,9 @@ import { ChevronLeft, ChevronRight, Home, CalendarDays, User, DollarSign } from 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { fetchKrossbookingReservations } from '@/lib/krossbooking';
-import { Calendar } from '@/components/ui/calendar';
+import { Calendar } from '@/components/ui/calendar'; // Keep import for potential future use or if other parts rely on it
 import { Badge } from '@/components/ui/badge';
-import CustomCalendarDay from '@/components/CustomCalendarDay';
+import CustomCalendarDay from '@/components/CustomCalendarDay'; // Keep import for potential future use
 
 interface KrossbookingReservation {
   id: string;
@@ -42,7 +41,8 @@ const channelColors: { [key: string]: { name: string; bgColor: string; textColor
 };
 
 const CalendarPage: React.FC = () => {
-  const isMobile = useIsMobile(); 
+  // useIsMobile is still available if you need to conditionally render other elements
+  // const isMobile = useIsMobile(); 
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,8 +68,8 @@ const CalendarPage: React.FC = () => {
   }, []);
 
   // The dayReservationSegments and filteredReservations useMemos are no longer needed here
-  // as MobileCalendarView will handle its own filtering based on its internal state.
-  // The detailed reservation list below the grid/calendar will also be handled by MobileCalendarView.
+  // as BookingPlanningGrid will handle its own filtering based on its internal state.
+  // The detailed reservation list below the grid/calendar will also be handled by BookingPlanningGrid.
 
   return (
     <MainLayout>
@@ -87,16 +87,8 @@ const CalendarPage: React.FC = () => {
 
         {!loading && !error && (
           <>
-            {isMobile ? (
-              <MobileCalendarView 
-                reservations={reservations} 
-                loading={loading} 
-                error={error} 
-                channelColors={channelColors} 
-              />
-            ) : (
-              <BookingPlanningGrid />
-            )}
+            {/* Always render BookingPlanningGrid */}
+            <BookingPlanningGrid />
 
             {/* You can keep the 'Événements à venir' card here as it's generic */}
             <Card className="shadow-md mt-6">
