@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addDays, differenceInDays } from 'date-fns';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addDays, differenceInDays, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale'; // Pour le formatage en français
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -169,7 +169,7 @@ const BookingPlanningGrid: React.FC = () => {
               {/* Day Cells (Background Grid) for the property row */}
               {daysInMonth.map((day, dayIndex) => {
                 const tasksForThisDay = housekeepingTasks.filter(task =>
-                  isSameDay(parseISO(task.date), day) && task.id_room.toString() === defaultRoomId
+                  isValid(parseISO(task.date)) && isSameDay(parseISO(task.date), day) && task.id_room.toString() === defaultRoomId
                 );
 
                 return (
@@ -207,8 +207,13 @@ const BookingPlanningGrid: React.FC = () => {
               {/* Reservation Bars (Overlay) */}
               {reservations
                 .map((reservation) => {
-                  const checkIn = parseISO(reservation.check_in_date);
-                  const checkOut = parseISO(reservation.check_out_date);
+                  const checkIn = isValid(parseISO(reservation.check_in_date)) ? parseISO(reservation.check_in_date) : null;
+                  const checkOut = isValid(parseISO(reservation.check_out_date)) ? parseISO(reservation.check_out_date) : null;
+
+                  if (!checkIn || !checkOut) {
+                    console.warn(`DEBUG: Skipping reservation ${reservation.id} due to invalid dates: check_in_date=${reservation.check_in_date}, check_out_date=${reservation.check_out_date}`);
+                    return null;
+                  }
 
                   const monthStart = startOfMonth(currentMonth);
                   const monthEnd = endOfMonth(currentMonth);
@@ -247,7 +252,7 @@ const BookingPlanningGrid: React.FC = () => {
                   }
 
                   const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
-                  const numberOfNights = differenceInDays(checkOut, checkIn);
+                  const numberOfNights = isValid(checkIn) && isValid(checkOut) ? differenceInDays(checkOut, checkIn) : 0;
 
                   return (
                     <div
@@ -261,7 +266,7 @@ const BookingPlanningGrid: React.FC = () => {
                         marginTop: '2px', // Small margin from the top of the grid row
                         marginBottom: '2px', // Small margin from the bottom of the grid row
                       }}
-                      title={`${reservation.guest_name} (${channelInfo.name}, ${reservation.status}) - Du ${format(checkIn, 'dd/MM', { locale: fr })} au ${format(checkOut, 'dd/MM', { locale: fr })}`}
+                      title={`${reservation.guest_name} (${channelInfo.name}, ${reservation.status}) - Du ${format(checkIn, 'dd/MM/yyyy', { locale: fr })} au ${format(checkOut, 'dd/MM/yyyy', { locale: fr })}`}
                     >
                       <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
                       <span className="mr-1">€ {numberOfNights}</span>
