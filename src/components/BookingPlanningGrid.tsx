@@ -75,8 +75,8 @@ const BookingPlanningGrid: React.FC = () => {
     setCurrentMonth(addMonths(currentMonth, 1));
   };
 
-  // Each day will now be represented by 2 grid columns (half-day units)
-  const halfDayCellWidth = 40; // px, adjust as needed for visual spacing
+  const dayCellWidth = 80; // px, width of each full day column
+  const propertyColumnWidth = 150; // px, width of the property name column
 
   return (
     <Card className="shadow-md">
@@ -108,18 +108,18 @@ const BookingPlanningGrid: React.FC = () => {
         )}
         {!loading && !error && reservations.length > 0 && (
           <div className="grid-container" style={{
-            // 1 column for property name, then 2 columns per day
-            gridTemplateColumns: `minmax(150px, 0.5fr) repeat(${daysInMonth.length * 2}, ${halfDayCellWidth}px)`,
-            minWidth: `${150 + daysInMonth.length * halfDayCellWidth * 2}px`, // Ensure minimum width for scroll
+            gridTemplateColumns: `minmax(${propertyColumnWidth}px, 0.5fr) repeat(${daysInMonth.length}, ${dayCellWidth}px)`,
+            minWidth: `${propertyColumnWidth + daysInMonth.length * dayCellWidth}px`, // Ensure minimum width for scroll
             gridAutoRows: '40px', // Height of each row (header, property row)
-            position: 'relative', // For reservation bars
+            position: 'relative', // For absolute positioning of reservation bars
           }}>
             {/* Header Row 1: Empty cell + Day numbers */}
             <div className="grid-cell header-cell sticky left-0 z-10 bg-white dark:bg-gray-950 border-b border-r col-span-1"></div>
             {daysInMonth.map((day, index) => (
               <div
                 key={index}
-                className="grid-cell header-cell text-center font-semibold border-b border-r col-span-2" // Each day spans 2 half-day columns
+                className="grid-cell header-cell text-center font-semibold border-b border-r"
+                style={{ width: `${dayCellWidth}px` }}
               >
                 {format(day, 'dd', { locale: fr })}
               </div>
@@ -130,7 +130,8 @@ const BookingPlanningGrid: React.FC = () => {
             {daysInMonth.map((day, index) => (
               <div
                 key={`day-name-${index}`}
-                className="grid-cell header-cell text-center text-xs text-gray-500 border-b border-r col-span-2" // Each day spans 2 half-day columns
+                className="grid-cell header-cell text-center text-xs text-gray-500 border-b border-r"
+                style={{ width: `${dayCellWidth}px` }}
               >
                 {format(day, 'EEE', { locale: fr })}
               </div>
@@ -139,23 +140,18 @@ const BookingPlanningGrid: React.FC = () => {
             {/* Property Row */}
             <React.Fragment>
               {/* Property Name Cell */}
-              <div className="grid-cell property-name-cell sticky left-0 z-10 bg-white dark:bg-gray-950 border-r border-b flex items-center px-2 col-span-1">
+              <div className="grid-cell property-name-cell sticky left-0 z-10 bg-white dark:bg-gray-950 border-r border-b flex items-center px-2">
                 <Home className="h-4 w-4 mr-2 text-gray-500" />
                 <span className="font-medium text-sm">{defaultRoomName}</span>
               </div>
 
               {/* Day Cells (Background Grid) for the property row */}
               {daysInMonth.map((day, dayIndex) => (
-                <React.Fragment key={`${defaultRoomId}-${format(day, 'yyyy-MM-dd')}-bg`}>
-                  {/* First half of the day */}
-                  <div
-                    className={`grid-cell border-b border-r ${isSameDay(day, new Date()) ? 'bg-blue-50 dark:bg-blue-950' : 'bg-gray-50 dark:bg-gray-800'}`}
-                  ></div>
-                  {/* Second half of the day */}
-                  <div
-                    className={`grid-cell border-b border-r ${isSameDay(day, new Date()) ? 'bg-blue-50 dark:bg-blue-950' : 'bg-gray-50 dark:bg-gray-800'}`}
-                  ></div>
-                </React.Fragment>
+                <div
+                  key={`${defaultRoomId}-${format(day, 'yyyy-MM-dd')}-bg`}
+                  className={`grid-cell border-b border-r ${isSameDay(day, new Date()) ? 'bg-blue-50 dark:bg-blue-950' : 'bg-gray-50 dark:bg-gray-800'}`}
+                  style={{ width: `${dayCellWidth}px` }}
+                ></div>
               ))}
 
               {/* Reservation Bars (Overlay) */}
@@ -163,44 +159,41 @@ const BookingPlanningGrid: React.FC = () => {
                 .map((reservation) => {
                   const checkIn = parseISO(reservation.check_in_date);
                   const checkOut = parseISO(reservation.check_out_date);
-                  const lastNight = addDays(checkOut, -1); // The last night the guest stays
 
                   const monthStart = startOfMonth(currentMonth);
                   const monthEnd = endOfMonth(currentMonth);
 
                   // Determine the effective visible start and end of the reservation bar within the current month
-                  const barStartDay = checkIn < monthStart ? monthStart : checkIn;
-                  const barEndDay = lastNight > monthEnd ? monthEnd : lastNight;
+                  const visibleCheckIn = checkIn < monthStart ? monthStart : checkIn;
+                  const visibleCheckOut = checkOut > monthEnd ? monthEnd : checkOut;
 
                   // If reservation doesn't overlap with current month, don't render
-                  if (barStartDay > barEndDay) {
+                  if (visibleCheckIn > visibleCheckOut) {
                     return null;
                   }
 
-                  // Calculate grid column start and end based on half-day units
-                  // Column 1 is property name. Day 1 starts at column 2 (first half).
-                  // Day index 0 (1st day of month) -> col 2 (start) to col 3 (end)
-                  // Day index 1 (2nd day of month) -> col 4 (start) to col 5 (end)
-                  // So, for a day at `dayIndex`, its first half starts at `(dayIndex * 2) + 2`
-                  // And its second half ends at `(dayIndex * 2) + 3`
+                  const startIndex = daysInMonth.findIndex(d => isSameDay(d, visibleCheckIn));
+                  const endIndex = daysInMonth.findIndex(d => isSameDay(d, visibleCheckOut));
 
-                  const startDayIndexInMonth = daysInMonth.findIndex(d => isSameDay(d, barStartDay));
-                  const endDayIndexInMonth = daysInMonth.findIndex(d => isSameDay(d, barEndDay));
-
-                  if (startDayIndexInMonth === -1 || endDayIndexInMonth === -1) {
-                    console.warn(`DEBUG: Reservation ${reservation.id} dates not found in current month's days array.`);
+                  if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
+                    console.warn(`DEBUG: Reservation ${reservation.id} dates not found in current month's days array or invalid range. Visible range: ${format(visibleCheckIn, 'yyyy-MM-dd')} to ${format(visibleCheckOut, 'yyyy-MM-dd')}. Start Index: ${startIndex}, End Index: ${endIndex}`);
                     return null;
                   }
 
-                  const gridColumnStart = (startDayIndexInMonth * 2) + 2;
-                  const gridColumnEnd = (endDayIndexInMonth * 2) + 3; // Ends at the end of the second half of the last night's day
+                  // Calculate left position: property column width + (start day index * day cell width) + half of day cell width
+                  const barLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 2);
+                  
+                  // Calculate width: (end day index - start day index) * day cell width
+                  // This spans from the start of the start day to the start of the end day.
+                  // We need to add half a day cell width to the end to reach the middle of the end day.
+                  const barWidth = (endIndex - startIndex) * dayCellWidth;
 
                   // Determine rounding classes
-                  let barBorderClasses = 'rounded-none';
-                  if (isSameDay(checkIn, barStartDay)) {
+                  let barBorderClasses = '';
+                  if (isSameDay(checkIn, visibleCheckIn)) {
                     barBorderClasses += ' rounded-l-full';
                   }
-                  if (isSameDay(lastNight, barEndDay)) {
+                  if (isSameDay(checkOut, visibleCheckOut)) {
                     barBorderClasses += ' rounded-r-full';
                   }
 
@@ -213,8 +206,8 @@ const BookingPlanningGrid: React.FC = () => {
                       className={`absolute h-9 flex items-center justify-start text-xs font-semibold overflow-hidden whitespace-nowrap px-2 ${channelInfo.bgColor} ${channelInfo.textColor} ${barBorderClasses} shadow-sm cursor-pointer hover:opacity-90 transition-opacity`}
                       style={{
                         gridRow: '3', // Always on the third row (after two header rows)
-                        gridColumnStart: gridColumnStart,
-                        gridColumnEnd: gridColumnEnd,
+                        left: `${barLeft}px`,
+                        width: `${barWidth}px`,
                         height: '36px', // Adjusted for better vertical centering
                         marginTop: '2px', // Small margin from the top of the grid row
                         marginBottom: '2px', // Small margin from the bottom of the grid row
