@@ -304,7 +304,7 @@ const DashboardPage = () => {
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 p-4">
+            <CardContent className="flex flex-col p-4"> {/* Removed md:justify-center here */}
               {loadingActivityData ? (
                 <p className="text-gray-500">Chargement des données d'activité...</p>
               ) : activityDataError ? (
@@ -315,41 +315,43 @@ const DashboardPage = () => {
                 </Alert>
               ) : (
                 <>
-                  {/* Wrapper div with fixed height for ResponsiveContainer */}
-                  <div className="w-full md:w-3/5" style={{ height: '300px' }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart isAnimationActive={true}>
-                        <Pie
-                          data={activityData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={100}
-                          outerRadius={140}
-                          fill="#8884d8"
-                          paddingAngle={5}
-                          dataKey="value"
-                          animationDuration={1000}
-                          animationEasing="ease-in-out"
-                        >
-                          {activityData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
+                  {/* New wrapper for chart and legend */}
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 w-full">
+                    <div className="w-full md:w-3/5" style={{ height: '300px' }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart isAnimationActive={true}>
+                          <Pie
+                            data={activityData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={100}
+                            outerRadius={140}
+                            fill="#8884d8"
+                            paddingAngle={5}
+                            dataKey="value"
+                            animationDuration={1000}
+                            animationEasing="ease-in-out"
+                          >
+                            {activityData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="text-sm space-y-2 mt-4 md:mt-0 md:ml-4 md:w-2/5 flex flex-col items-start">
+                      {activityData.map((item) => (
+                        <div key={item.name} className="flex items-center">
+                          <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: item.color }}></span>
+                          {item.name}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="text-sm space-y-2 mt-4 md:mt-0 md:ml-4 md:w-2/5 flex flex-col items-start">
-                    {activityData.map((item) => (
-                      <div key={item.name} className="flex items-center">
-                        <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: item.color }}></span>
-                        {item.name}
-                      </div>
-                    ))}
-                  </div>
+                  <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400 mt-4 md:self-end">Voir mes réservations -&gt;</Button>
                 </>
               )}
-              <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400 mt-4 md:mt-0 md:self-end">Voir mes réservations -&gt;</Button>
             </CardContent>
           </Card>
 
