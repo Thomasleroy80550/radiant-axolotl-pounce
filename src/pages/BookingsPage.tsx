@@ -5,12 +5,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { fetchKrossbookingReservations } from '@/lib/krossbooking';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, CalendarDays, DollarSign, User, Home, Tag } from 'lucide-react'; // Added icons for mobile cards
+import { Terminal, CalendarDays, DollarSign, User, Home, Tag } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfYear, endOfYear } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { getUserRooms, UserRoom } from '@/lib/user-room-api'; // Import user room API
-import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile hook
-import { cn } from '@/lib/utils'; // Import cn for conditional styling
+import { getUserRooms, UserRoom } from '@/lib/user-room-api';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 interface Booking {
   id: string;
@@ -28,7 +35,10 @@ const BookingsPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
-  const isMobile = useIsMobile(); // Use the hook to detect mobile
+  const isMobile = useIsMobile();
+
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
   useEffect(() => {
     const loadBookings = async () => {
@@ -76,7 +86,7 @@ const BookingsPage: React.FC = () => {
     };
 
     loadBookings();
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
   const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -92,6 +102,11 @@ const BookingsPage: React.FC = () => {
       default:
         return 'outline';
     }
+  };
+
+  const handleOpenDetails = (booking: Booking) => {
+    setSelectedBooking(booking);
+    setIsDetailDialogOpen(true);
   };
 
   const currentYear = new Date().getFullYear();
@@ -141,7 +156,7 @@ const BookingsPage: React.FC = () => {
                       </TableHeader>
                       <TableBody>
                         {bookings.map((booking) => (
-                          <TableRow key={booking.id}>
+                          <TableRow key={booking.id} onClick={() => handleOpenDetails(booking)} className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700">
                             <TableCell className="font-medium">{booking.id}</TableCell>
                             <TableCell>{booking.guest_name}</TableCell>
                             <TableCell>{booking.property_name}</TableCell>
@@ -153,7 +168,7 @@ const BookingsPage: React.FC = () => {
                                 {booking.status}
                               </Badge>
                             </TableCell>
-                            <TableCell className={`text-right font-bold ${booking.type === 'Revenu' ? 'text-green-600' : 'text-red-600'}`}>
+                            <TableCell className="text-right font-bold text-gray-800 dark:text-gray-200">
                               {booking.amount}
                             </TableCell>
                           </TableRow>
@@ -167,7 +182,7 @@ const BookingsPage: React.FC = () => {
                 {isMobile && (
                   <div className="grid grid-cols-1 gap-4">
                     {bookings.map((booking) => (
-                      <Card key={booking.id} className="shadow-sm">
+                      <Card key={booking.id} className="shadow-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => handleOpenDetails(booking)}>
                         <CardHeader className="pb-2">
                           <CardTitle className="text-base font-semibold flex items-center">
                             <Tag className="h-4 w-4 mr-2 text-gray-500" />
@@ -189,7 +204,7 @@ const BookingsPage: React.FC = () => {
                           </p>
                           <p className="flex items-center">
                             <DollarSign className="h-4 w-4 mr-2 text-gray-500" />
-                            <span className={cn("font-bold", booking.status === 'confirmed' ? 'text-green-600' : 'text-gray-800 dark:text-gray-200')}>
+                            <span className="font-bold text-gray-800 dark:text-gray-200">
                               {booking.amount}
                             </span>
                           </p>
@@ -209,6 +224,58 @@ const BookingsPage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Booking Details Dialog */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Détails de la Réservation</DialogTitle>
+            <DialogDescription>
+              Informations complètes sur la réservation sélectionnée.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedBooking && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">ID:</Label>
+                <span className="col-span-2 font-medium">{selectedBooking.id}</span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Client:</Label>
+                <span className="col-span-2">{selectedBooking.guest_name}</span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Propriété:</Label>
+                <span className="col-span-2">{selectedBooking.property_name}</span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Canal:</Label>
+                <span className="col-span-2">{selectedBooking.cod_channel || 'N/A'}</span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Arrivée:</Label>
+                <span className="col-span-2">{format(parseISO(selectedBooking.check_in_date), 'dd/MM/yyyy', { locale: fr })}</span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Départ:</Label>
+                <span className="col-span-2">{format(parseISO(selectedBooking.check_out_date), 'dd/MM/yyyy', { locale: fr })}</span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Statut:</Label>
+                <span className="col-span-2">
+                  <Badge variant={getStatusVariant(selectedBooking.status)}>
+                    {selectedBooking.status}
+                  </Badge>
+                </span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Montant:</Label>
+                <span className="col-span-2 font-bold text-gray-800 dark:text-gray-200">{selectedBooking.amount}</span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };
