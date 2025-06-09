@@ -8,8 +8,8 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart, // Changed from BarChart
-  Line,       // Changed from Bar
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -31,18 +31,18 @@ const DashboardPage = () => {
 
   // Monthly Financial Data for Line Chart
   const monthlyFinancialData = [
-    { name: 'Jan', montantVerse: 2500, frais: 500, benef: 2000 },
-    { name: 'Fév', montantVerse: 2800, frais: 550, benef: 2250 },
-    { name: 'Mar', montantVerse: 2200, frais: 450, benef: 1750 },
-    { name: 'Avr', montantVerse: 3000, frais: 600, benef: 2400 },
-    { name: 'Mai', montantVerse: 2700, frais: 520, benef: 2180 },
-    { name: 'Juin', montantVerse: 3200, frais: 650, benef: 2550 },
-    { name: 'Juil', montantVerse: 3500, frais: 700, benef: 2800 },
-    { name: 'Août', montantVerse: 3800, frais: 750, benef: 3050 },
-    { name: 'Sep', montantVerse: 3100, frais: 620, benef: 2480 },
-    { name: 'Oct', montantVerse: 2900, frais: 580, benef: 2320 },
-    { name: 'Nov', montantVerse: 3300, frais: 660, benef: 2640 },
-    { name: 'Déc', montantVerse: 3600, frais: 720, benef: 2880 },
+    { name: 'Jan', montantVerse: 2500, frais: 500, benef: 2000, ca: 3000 },
+    { name: 'Fév', montantVerse: 2800, frais: 550, benef: 2250, ca: 3350 },
+    { name: 'Mar', montantVerse: 2200, frais: 450, benef: 1750, ca: 2650 },
+    { name: 'Avr', montantVerse: 3000, frais: 600, benef: 2400, ca: 3600 },
+    { name: 'Mai', montantVerse: 2700, frais: 520, benef: 2180, ca: 3220 },
+    { name: 'Juin', montantVerse: 3200, frais: 650, benef: 2550, ca: 3850 },
+    { name: 'Juil', montantVerse: 3500, frais: 700, benef: 2800, ca: 4200 },
+    { name: 'Août', montantVerse: 3800, frais: 750, benef: 3050, ca: 4550 },
+    { name: 'Sep', montantVerse: 3100, frais: 620, benef: 2480, ca: 3720 },
+    { name: 'Oct', montantVerse: 2900, frais: 580, benef: 2320, ca: 3480 },
+    { name: 'Nov', montantVerse: 3300, frais: 660, benef: 2640, ca: 3960 },
+    { name: 'Déc', montantVerse: 3600, frais: 720, benef: 2880, ca: 4320 },
   ];
 
   const reservationPerMonthData = [
@@ -226,6 +226,7 @@ const DashboardPage = () => {
                     formatter={(value: number) => `${value}€`}
                   />
                   <Legend />
+                  <Line type="monotone" dataKey="ca" stroke="#8884d8" name="CA" activeDot={{ r: 8 }} /> {/* New CA line */}
                   <Line type="monotone" dataKey="montantVerse" stroke="hsl(var(--primary))" name="Montant Versé" activeDot={{ r: 8 }} />
                   <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" activeDot={{ r: 8 }} />
                   <Line type="monotone" dataKey="benef" stroke="hsl(var(--accent))" name="Bénéfice" activeDot={{ r: 8 }} />
