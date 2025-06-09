@@ -173,7 +173,7 @@ const BookingPlanningGrid: React.FC = () => {
                   const monthStart = startOfMonth(currentMonth);
                   const monthEnd = endOfMonth(currentMonth);
 
-                  // The actual last night of the stay
+                  // The actual last occupied day of the stay
                   const lastOccupiedDay = addDays(checkOut, -1);
 
                   // Determine the visible start and end dates for the bar within the current month
@@ -208,14 +208,14 @@ const BookingPlanningGrid: React.FC = () => {
                     barWidth = dayCellWidth / 2; // Make it half the cell width
                     barBorderClasses = ' rounded-full';
                   } else {
-                    // For multi-night bookings
+                    // For multi-night bookings, adjust for arrival and departure visuals
                     if (isOriginalCheckInVisible) {
-                      barLeft += halfDayWidth; // Shift start to mid-day
-                      barWidth -= halfDayWidth; // Reduce width from left
+                      barLeft += halfDayWidth; // Start from the middle of the arrival day cell
+                      barWidth -= halfDayWidth; // Reduce width by half a day from the left
                       barBorderClasses += ' rounded-l-full';
                     }
                     if (isOriginalCheckOutVisible) {
-                      barWidth -= halfDayWidth; // Reduce width from right
+                      barWidth -= halfDayWidth; // Reduce width by half a day from the right
                       barBorderClasses += ' rounded-r-full';
                     }
                   }
@@ -266,7 +266,7 @@ const BookingPlanningGrid: React.FC = () => {
               </div>
             ))}
           </div>
-        </div>
+        </CardContent>
       </CardContent>
     </Card>
   );
