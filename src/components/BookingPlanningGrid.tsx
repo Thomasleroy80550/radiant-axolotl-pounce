@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addDays, differenceInDays, isValid } from 'date-fns';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addDays, subDays, differenceInDays, isValid, max, min } from 'date-fns';
 import { fr } from 'date-fns/locale'; // Pour le formatage en français
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -88,6 +88,7 @@ const BookingPlanningGrid: React.FC = () => {
 
   const dayCellWidth = 80; // px, width of each full day column
   const propertyColumnWidth = 150; // px, width of the property name column
+  const horizontalPadding = 8; // px, padding inside the cell for the bar to appear centered
 
   // Function to get icon based on task status
   const getTaskIcon = (status: string) => {
@@ -208,9 +209,11 @@ const BookingPlanningGrid: React.FC = () => {
               {reservations
                 .map((reservation) => {
                   const checkIn = isValid(parseISO(reservation.check_in_date)) ? parseISO(reservation.check_in_date) : null;
-                  const checkOut = isValid(parseISO(reservation.check_out_date)) ? parseISO(reservation.check_out_date) : null;
+                  // Krossbooking check_out_date is the day *after* the last occupied night.
+                  // So, the last occupied day is check_out_date - 1 day.
+                  const lastOccupiedDay = isValid(parseISO(reservation.check_out_date)) ? subDays(parseISO(reservation.check_out_date), 1) : null;
 
-                  if (!checkIn || !checkOut) {
+                  if (!checkIn || !lastOccupiedDay) {
                     console.warn(`DEBUG: Skipping reservation ${reservation.id} due to invalid dates: check_in_date=${reservation.check_in_date}, check_out_date=${reservation.check_out_date}`);
                     return null;
                   }
@@ -219,36 +222,44 @@ const BookingPlanningGrid: React.FC = () => {
                   const monthEnd = endOfMonth(currentMonth);
 
                   // Determine the effective visible start and end of the reservation bar within the current month
-                  const visibleCheckIn = checkIn < monthStart ? monthStart : checkIn;
-                  const visibleCheckOut = checkOut > monthEnd ? monthEnd : checkOut;
+                  const visibleCheckIn = max([checkIn, monthStart]);
+                  const visibleLastOccupiedDay = min([lastOccupiedDay, monthEnd]);
 
                   // If reservation doesn't overlap with current month, don't render
-                  if (visibleCheckIn > visibleCheckOut) {
+                  if (visibleCheckIn > visibleLastOccupiedDay) {
                     return null;
                   }
 
                   const startIndex = daysInMonth.findIndex(d => isSameDay(d, visibleCheckIn));
-                  const endIndex = daysInMonth.findIndex(d => isSameDay(d, visibleCheckOut));
+                  const endIndex = daysInMonth.findIndex(d => isSameDay(d, visibleLastOccupiedDay));
 
                   if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
-                    console.warn(`DEBUG: Reservation ${reservation.id} dates not found in current month's days array or invalid range. Visible range: ${format(visibleCheckIn, 'yyyy-MM-dd')} to ${format(visibleCheckOut, 'yyyy-MM-dd')}. Start Index: ${startIndex}, End Index: ${endIndex}`);
+                    console.warn(`DEBUG: Reservation ${reservation.id} dates not found in current month's days array or invalid range. Visible range: ${format(visibleCheckIn, 'yyyy-MM-dd')} to ${format(visibleLastOccupiedDay, 'yyyy-MM-dd')}. Start Index: ${startIndex}, End Index: ${endIndex}`);
                     return null;
                   }
 
-                  // Calculate left position: property column width + (start day index * day cell width)
-                  const barLeft = propertyColumnWidth + (startIndex * dayCellWidth);
+                  // Calculate left position: property column width + (start day index * day cell width) + horizontal padding
+                  const barLeft = propertyColumnWidth + (startIndex * dayCellWidth) + horizontalPadding;
                   
-                  // Calculate width: (number of visible days) * day cell width
-                  const numberOfVisibleDays = differenceInDays(visibleCheckOut, visibleCheckIn) + 1; // +1 to include the end day
-                  const barWidth = numberOfVisibleDays * dayCellWidth;
+                  // Calculate width: (number of visible days) * day cell width - (2 * horizontal padding)
+                  const numberOfVisibleDays = differenceInDays(visibleLastOccupiedDay, visibleCheckIn) + 1; // +1 to include the end day
+                  const barWidth = (numberOfVisibleDays * dayCellWidth) - (2 * horizontalPadding);
 
                   const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
-                  const numberOfNights = isValid(checkIn) && isValid(checkOut) ? differenceInDays(checkOut, checkIn) : 0;
+                  const numberOfNights = isValid(checkIn) && isValid(parseISO(reservation.check_out_date)) ? differenceInDays(parseISO(reservation.check_out_date), checkIn) : 0;
+
+                  // Determine if the actual start/end of the reservation is visible in this month's view
+                  const isActualStartVisible = isSameDay(checkIn, visibleCheckIn);
+                  const isActualEndVisible = isSameDay(lastOccupiedDay, visibleLastOccupiedDay);
 
                   return (
                     <div
                       key={reservation.id}
-                      className={`absolute h-9 flex items-center text-xs font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm cursor-pointer hover:opacity-90 transition-opacity rounded-full`} // Always rounded-full for consistency
+                      className={`absolute h-9 flex items-center text-xs font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm cursor-pointer hover:opacity-90 transition-opacity
+                        ${isActualStartVisible ? 'rounded-l-full' : 'rounded-none'}
+                        ${isActualEndVisible ? 'rounded-r-full' : 'rounded-none'}
+                        ${!isActualStartVisible && !isActualEndVisible ? 'rounded-none' : ''}
+                      `}
                       style={{
                         gridRow: '3', // Always on the third row (after two header rows)
                         left: `${barLeft}px`,
@@ -258,7 +269,7 @@ const BookingPlanningGrid: React.FC = () => {
                         marginBottom: '2px', // Small margin from the bottom of the grid row
                       }}
                     >
-                      {isSameDay(checkIn, visibleCheckIn) && (
+                      {isActualStartVisible && (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <div className="absolute left-0 top-0 bottom-0 flex items-center px-1 bg-black bg-opacity-20 rounded-l-full">
@@ -276,7 +287,7 @@ const BookingPlanningGrid: React.FC = () => {
                         <span className="mx-1">|</span>
                         <span className="truncate">{reservation.guest_name}</span>
                       </span>
-                      {isSameDay(checkOut, visibleCheckOut) && (
+                      {isActualEndVisible && (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <div className="absolute right-0 top-0 bottom-0 flex items-center px-1 bg-black bg-opacity-20 rounded-r-full">
