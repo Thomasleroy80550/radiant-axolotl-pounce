@@ -53,7 +53,7 @@ const DashboardPage = () => {
   const [monthlyFinancialDataError, setMonthlyFinancialDataError] = useState<string | null>(null);
 
   const [isObjectiveDialogOpen, setIsObjectiveDialogOpen] = useState(false);
-  const [userObjective, setUserObjective] = useState(0); // User's target objective from profile
+  const [userObjectiveAmount, setUserObjectiveAmount] = useState(0); // User's target objective in Euros
 
   const fetchData = async () => {
     // Fetch Activity Data
@@ -89,23 +89,32 @@ const DashboardPage = () => {
         getProfile(),
       ]);
 
+      let currentResultatAnnee = 0;
       if (financialSheetData && financialSheetData.length > 0 && financialSheetData[0].length >= 4) {
         const [vente, rentree, frais, resultat] = financialSheetData[0].map(Number);
-        const calculatedAchievement = (isNaN(resultat) || isNaN(vente) || vente === 0) ? 0 : (resultat / vente) * 100;
+        currentResultatAnnee = isNaN(resultat) ? 0 : resultat;
 
-        setFinancialData({
+        setFinancialData(prev => ({
+          ...prev,
           venteAnnee: isNaN(vente) ? 0 : vente,
           rentreeArgentAnnee: isNaN(rentree) ? 0 : rentree,
           fraisAnnee: isNaN(frais) ? 0 : frais,
-          resultatAnnee: isNaN(resultat) ? 0 : resultat,
-          currentAchievementPercentage: calculatedAchievement,
-        });
+          resultatAnnee: currentResultatAnnee,
+        }));
       } else {
         setFinancialDataError("Format de données inattendu pour le bilan financier.");
       }
 
       if (userProfile) {
-        setUserObjective(userProfile.objective_percentage || 0); // Set user's objective, default to 0
+        const objectiveAmount = userProfile.objective_amount || 0;
+        setUserObjectiveAmount(objectiveAmount);
+
+        // Calculate achievement percentage based on 'resultatAnnee' and 'objective_amount'
+        const calculatedAchievement = (objectiveAmount === 0) ? 0 : (currentResultatAnnee / objectiveAmount) * 100;
+        setFinancialData(prev => ({
+          ...prev,
+          currentAchievementPercentage: calculatedAchievement,
+        }));
       } else {
         setFinancialDataError("Impossible de charger le profil utilisateur.");
       }
@@ -237,7 +246,7 @@ const DashboardPage = () => {
                   <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Voir mes statistiques -&gt;</Button>
                   
                   <div className="space-y-2">
-                    <p className="text-sm text-gray-700 dark:text-gray-300">Mon objectif: <span className="font-bold">{userObjective.toFixed(2)}%</span></p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">Mon objectif: <span className="font-bold">{userObjectiveAmount.toFixed(2)}€</span></p>
                     <Progress value={financialData.currentAchievementPercentage} className="h-2" />
                     <p className="text-xs text-gray-500">Atteint: {financialData.currentAchievementPercentage.toFixed(2)}%</p>
                     <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400" onClick={() => setIsObjectiveDialogOpen(true)}>
@@ -429,7 +438,7 @@ const DashboardPage = () => {
       <ObjectiveDialog
         isOpen={isObjectiveDialogOpen}
         onOpenChange={setIsObjectiveDialogOpen}
-        currentObjective={userObjective}
+        currentObjectiveAmount={userObjectiveAmount} // Pass the amount
         onObjectiveUpdated={fetchData} // Re-fetch all data after objective is updated
       />
     </MainLayout>
