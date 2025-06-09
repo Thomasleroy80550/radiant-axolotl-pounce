@@ -2,7 +2,7 @@ import React from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import BookingPlanningGrid from '@/components/BookingPlanningGrid';
-import MobileCalendarSummary from '@/components/MobileCalendarSummary'; // Import the new mobile component
+import CalendarGridMobile from '@/components/CalendarGridMobile'; // Import the new mobile grid component
 import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile hook
 
 const CalendarPage: React.FC = () => {
@@ -14,7 +14,7 @@ const CalendarPage: React.FC = () => {
         <h1 className="text-3xl font-bold mb-6">Calendrier</h1>
         
         {isMobile ? (
-          <MobileCalendarSummary />
+          <CalendarGridMobile />
         ) : (
           <BookingPlanningGrid />
         )}
