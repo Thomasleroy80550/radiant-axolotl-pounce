@@ -143,8 +143,8 @@ const CalendarPage: React.FC = () => {
                     modifiers={{ booked: bookedDays }}
                     modifiersStyles={{
                       booked: {
-                        backgroundColor: 'hsl(var(--primary))',
-                        color: 'hsl(var(--primary-foreground))',
+                        backgroundColor: 'hsl(var(--accent))', // Using accent color for booked days
+                        color: 'hsl(var(--accent-foreground))', // Using accent-foreground for text
                         borderRadius: '0.25rem',
                       },
                     }}
