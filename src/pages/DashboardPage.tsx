@@ -21,6 +21,8 @@ import {
 import React, { useState, useEffect } from "react";
 import { callGSheetProxy } from "@/lib/gsheets";
 import { toast } from "sonner";
+import ObjectiveDialog from "@/components/ObjectiveDialog"; // Import the new dialog component
+import { getProfile } from "@/lib/profile-api"; // Import getProfile
 
 const DashboardPage = () => {
   const currentYear = new Date().getFullYear();
@@ -41,7 +43,7 @@ const DashboardPage = () => {
     rentreeArgentAnnee: 0,
     fraisAnnee: 0,
     resultatAnnee: 0,
-    objectifPourcentage: 0, // Assuming this will also come from GSheet, or calculated
+    currentAchievementPercentage: 0, // Renamed for clarity
   });
   const [loadingFinancialData, setLoadingFinancialData] = useState(true);
   const [financialDataError, setFinancialDataError] = useState<string | null>(null);
@@ -50,114 +52,103 @@ const DashboardPage = () => {
   const [loadingMonthlyFinancialData, setLoadingMonthlyFinancialData] = useState(true);
   const [monthlyFinancialDataError, setMonthlyFinancialDataError] = useState<string | null>(null);
 
+  const [isObjectiveDialogOpen, setIsObjectiveDialogOpen] = useState(false);
+  const [userObjective, setUserObjective] = useState(0); // User's target objective from profile
+
+  const fetchData = async () => {
+    // Fetch Activity Data
+    setLoadingActivityData(true);
+    setActivityDataError(null);
+    try {
+      const data = await callGSheetProxy({ action: 'read_sheet', range: 'DG2:DK2' });
+      if (data && data.length > 0 && data[0].length >= 5) {
+        const [bookingValue, airbnbValue, abritelValue, helloKeysValue, proprioValue] = data[0].map(Number);
+        setActivityData([
+          { name: 'Airbnb', value: isNaN(airbnbValue) ? 0 : airbnbValue, color: '#1e40af' },
+          { name: 'Booking', value: isNaN(bookingValue) ? 0 : bookingValue, color: '#ef4444' },
+          { name: 'Abritel', value: isNaN(abritelValue) ? 0 : abritelValue, color: '#3b82f6' },
+          { name: 'Hello Keys', value: isNaN(helloKeysValue) ? 0 : helloKeysValue, color: '#0e7490' },
+          { name: 'Proprio', value: isNaN(proprioValue) ? 0 : proprioValue, color: '#4f46e5' },
+        ]);
+      } else {
+        setActivityDataError("Format de données inattendu pour l'activité de location.");
+      }
+    } catch (err: any) {
+      setActivityDataError(`Erreur lors du chargement des données d'activité : ${err.message}`);
+      console.error("Error fetching activity data:", err);
+    } finally {
+      setLoadingActivityData(false);
+    }
+
+    // Fetch Financial Data and User Profile
+    setLoadingFinancialData(true);
+    setFinancialDataError(null);
+    try {
+      const [financialSheetData, userProfile] = await Promise.all([
+        callGSheetProxy({ action: 'read_sheet', range: 'C2:F2' }),
+        getProfile(),
+      ]);
+
+      if (financialSheetData && financialSheetData.length > 0 && financialSheetData[0].length >= 4) {
+        const [vente, rentree, frais, resultat] = financialSheetData[0].map(Number);
+        const calculatedAchievement = (isNaN(resultat) || isNaN(vente) || vente === 0) ? 0 : (resultat / vente) * 100;
+
+        setFinancialData({
+          venteAnnee: isNaN(vente) ? 0 : vente,
+          rentreeArgentAnnee: isNaN(rentree) ? 0 : rentree,
+          fraisAnnee: isNaN(frais) ? 0 : frais,
+          resultatAnnee: isNaN(resultat) ? 0 : resultat,
+          currentAchievementPercentage: calculatedAchievement,
+        });
+      } else {
+        setFinancialDataError("Format de données inattendu pour le bilan financier.");
+      }
+
+      if (userProfile) {
+        setUserObjective(userProfile.objective_percentage || 0); // Set user's objective, default to 0
+      } else {
+        setFinancialDataError("Impossible de charger le profil utilisateur.");
+      }
+    } catch (err: any) {
+      setFinancialDataError(`Erreur lors du chargement des données financières ou du profil : ${err.message}`);
+      console.error("Error fetching financial data or profile:", err);
+    } finally {
+      setLoadingFinancialData(false);
+    }
+
+    // Fetch Monthly Financial Data
+    setLoadingMonthlyFinancialData(true);
+    setMonthlyFinancialDataError(null);
+    try {
+      const data = await callGSheetProxy({ action: 'read_sheet', range: 'BU2:CF5' });
+      if (data && data.length >= 4) {
+        const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+        const caValues = data[0] || [];
+        const montantVerseValues = data[1] || [];
+        const fraisValues = data[2] || [];
+        const benefValues = data[3] || [];
+
+        const formattedData = months.map((month, index) => ({
+          name: month,
+          ca: parseFloat(caValues[index]) || 0,
+          montantVerse: parseFloat(montantVerseValues[index]) || 0,
+          frais: parseFloat(fraisValues[index]) || 0,
+          benef: parseFloat(benefValues[index]) || 0,
+        }));
+        setMonthlyFinancialData(formattedData);
+      } else {
+        setMonthlyFinancialDataError("Format de données inattendu pour les statistiques financières mensuelles.");
+      }
+    } catch (err: any) {
+      setMonthlyFinancialDataError(`Erreur lors du chargement des statistiques financières mensuelles : ${err.message}`);
+      console.error("Error fetching monthly financial data:", err);
+    } finally {
+      setLoadingMonthlyFinancialData(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchActivityData = async () => {
-      setLoadingActivityData(true);
-      setActivityDataError(null);
-      try {
-        // Fetch values from DG2, DH2, DI2, DJ2, DK2
-        const data = await callGSheetProxy({ action: 'read_sheet', range: 'DG2:DK2' });
-        console.log("DEBUG (DashboardPage): Fetched activity data from GSheet:", data);
-
-        if (data && data.length > 0 && data[0].length >= 5) {
-          const [bookingValue, airbnbValue, abritelValue, helloKeysValue, proprioValue] = data[0].map(Number);
-
-          setActivityData([
-            { name: 'Airbnb', value: isNaN(airbnbValue) ? 0 : airbnbValue, color: '#1e40af' }, // blue-800
-            { name: 'Booking', value: isNaN(bookingValue) ? 0 : bookingValue, color: '#ef4444' }, // red-500
-            { name: 'Abritel', value: isNaN(abritelValue) ? 0 : abritelValue, color: '#3b82f6' }, // blue-500
-            { name: 'Hello Keys', value: isNaN(helloKeysValue) ? 0 : helloKeysValue, color: '#0e7490' }, // cyan-700
-            { name: 'Proprio', value: isNaN(proprioValue) ? 0 : proprioValue, color: '#4f46e5' }, // indigo-600 for PROPRIO
-          ]);
-          toast.success("Données d'activité de location mises à jour !");
-        } else {
-          setActivityDataError("Format de données inattendu pour l'activité de location.");
-          toast.error("Erreur: Format de données inattendu pour l'activité de location.");
-        }
-      } catch (err: any) {
-        setActivityDataError(`Erreur lors du chargement des données d'activité : ${err.message}`);
-        toast.error(`Erreur: ${err.message}`);
-        console.error("Error fetching activity data:", err);
-      } finally {
-        setLoadingActivityData(false);
-      }
-    };
-
-    const fetchFinancialData = async () => {
-      setLoadingFinancialData(true);
-      setFinancialDataError(null);
-      try {
-        // Fetch values from C2, D2, E2, F2
-        const data = await callGSheetProxy({ action: 'read_sheet', range: 'C2:F2' });
-        console.log("DEBUG (DashboardPage): Fetched financial data from GSheet:", data);
-
-        if (data && data.length > 0 && data[0].length >= 4) {
-          const [vente, rentree, frais, resultat] = data[0].map(Number);
-          
-          // Calculate objective percentage if 'resultat' and 'vente' are available
-          const calculatedObjective = (isNaN(resultat) || isNaN(vente) || vente === 0) ? 0 : (resultat / vente) * 100;
-
-          setFinancialData({
-            venteAnnee: isNaN(vente) ? 0 : vente,
-            rentreeArgentAnnee: isNaN(rentree) ? 0 : rentree,
-            fraisAnnee: isNaN(frais) ? 0 : frais,
-            resultatAnnee: isNaN(resultat) ? 0 : resultat,
-            objectifPourcentage: calculatedObjective,
-          });
-          toast.success("Données financières mises à jour !");
-        } else {
-          setFinancialDataError("Format de données inattendu pour le bilan financier.");
-          toast.error("Erreur: Format de données inattendu pour le bilan financier.");
-        }
-      } catch (err: any) {
-        setFinancialDataError(`Erreur lors du chargement des données financières : ${err.message}`);
-        toast.error(`Erreur: ${err.message}`);
-        console.error("Error fetching financial data:", err);
-      } finally {
-        setLoadingFinancialData(false);
-      }
-    };
-
-    const fetchMonthlyFinancialData = async () => {
-      setLoadingMonthlyFinancialData(true);
-      setMonthlyFinancialDataError(null);
-      try {
-        // Fetch all required ranges in one call
-        const data = await callGSheetProxy({ action: 'read_sheet', range: 'BU2:CF5' });
-        console.log("DEBUG (DashboardPage): Fetched monthly financial data from GSheet:", data);
-
-        if (data && data.length >= 4) {
-          const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
-          const caValues = data[0] || [];
-          const montantVerseValues = data[1] || [];
-          const fraisValues = data[2] || [];
-          const benefValues = data[3] || [];
-
-          const formattedData = months.map((month, index) => ({
-            name: month,
-            ca: parseFloat(caValues[index]) || 0,
-            montantVerse: parseFloat(montantVerseValues[index]) || 0,
-            frais: parseFloat(fraisValues[index]) || 0,
-            benef: parseFloat(benefValues[index]) || 0,
-          }));
-          setMonthlyFinancialData(formattedData);
-          toast.success("Statistiques financières mensuelles mises à jour !");
-        } else {
-          setMonthlyFinancialDataError("Format de données inattendu pour les statistiques financières mensuelles.");
-          toast.error("Erreur: Format de données inattendu pour les statistiques financières mensuelles.");
-        }
-      } catch (err: any) {
-        setMonthlyFinancialDataError(`Erreur lors du chargement des statistiques financières mensuelles : ${err.message}`);
-        toast.error(`Erreur: ${err.message}`);
-        console.error("Error fetching monthly financial data:", err);
-      } finally {
-        setLoadingMonthlyFinancialData(false);
-      }
-    };
-
-    fetchActivityData();
-    fetchFinancialData();
-    fetchMonthlyFinancialData();
+    fetchData();
   }, []); // Empty dependency array means this runs once on mount
 
   const reservationPerMonthData = [
@@ -225,7 +216,7 @@ const DashboardPage = () => {
                 </Alert>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 gap-4"> {/* Use grid for better alignment */}
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col items-start">
                       <p className="text-xl md:text-2xl font-bold text-green-600">{financialData.venteAnnee.toFixed(2)}€</p>
                       <p className="text-sm text-gray-500">Vente sur l'année</p>
@@ -246,10 +237,12 @@ const DashboardPage = () => {
                   <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Voir mes statistiques -&gt;</Button>
                   
                   <div className="space-y-2">
-                    <p className="text-sm text-gray-700 dark:text-gray-300">Mon objectif</p>
-                    <Progress value={financialData.objectifPourcentage} className="h-2" />
-                    <p className="text-xs text-gray-500">{financialData.objectifPourcentage.toFixed(2)}%</p>
-                    <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Modifier mon objectif -&gt;</Button>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">Mon objectif: <span className="font-bold">{userObjective.toFixed(2)}%</span></p>
+                    <Progress value={financialData.currentAchievementPercentage} className="h-2" />
+                    <p className="text-xs text-gray-500">Atteint: {financialData.currentAchievementPercentage.toFixed(2)}%</p>
+                    <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400" onClick={() => setIsObjectiveDialogOpen(true)}>
+                      Modifier mon objectif -&gt;
+                    </Button>
                   </div>
                 </>
               )}
@@ -433,6 +426,12 @@ const DashboardPage = () => {
         </div>
       </div>
       <MadeWithDyad />
+      <ObjectiveDialog
+        isOpen={isObjectiveDialogOpen}
+        onOpenChange={setIsObjectiveDialogOpen}
+        currentObjective={userObjective}
+        onObjectiveUpdated={fetchData} // Re-fetch all data after objective is updated
+      />
     </MainLayout>
   );
 };
