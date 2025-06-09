@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import BookingPlanningGrid from '@/components/BookingPlanningGrid'; // Import the new component
-import MobileBookingList from '@/components/MobileBookingList'; // Import the new mobile list component
-import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile hook
+import BookingPlanningGrid from '@/components/BookingPlanningGrid';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addDays, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Home } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Home, CalendarDays, User, DollarSign } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { fetchKrossbookingReservations } from '@/lib/krossbooking';
+import { Calendar } from '@/components/ui/calendar'; // Import Calendar component
+import { Badge } from '@/components/ui/badge'; // Import Badge for reservation list
 
 interface KrossbookingReservation {
   id: string;
@@ -31,6 +32,7 @@ const defaultRoomName = 'Ma Chambre par défaut (2c)';
 const CalendarPage: React.FC = () => {
   const isMobile = useIsMobile();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date()); // State for selected date in mobile calendar
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,47 +57,129 @@ const CalendarPage: React.FC = () => {
     loadReservations();
   }, []);
 
-  const daysInMonth = useMemo(() => {
-    const start = startOfMonth(currentMonth);
-    const end = endOfMonth(currentMonth);
-    return eachDayOfInterval({ start, end });
-  }, [currentMonth]);
-
-  const goToPreviousMonth = () => {
-    setCurrentMonth(subMonths(currentMonth, 1));
-  };
-
-  const goToNextMonth = () => {
-    setCurrentMonth(addMonths(currentMonth, 1));
-  };
-
-  // Filter reservations for the current month to pass to MobileBookingList
-  const currentMonthReservations = useMemo(() => {
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(currentMonth);
-    return reservations.filter(res => {
+  // Prepare modifiers for the Calendar component to highlight booked days
+  const bookedDays = useMemo(() => {
+    const dates: Date[] = [];
+    reservations.forEach(res => {
       const checkIn = parseISO(res.check_in_date);
       const checkOut = parseISO(res.check_out_date);
-      // A reservation is relevant if it starts or ends within the current month, or spans across it
-      return (
-        (checkIn <= monthEnd && checkOut >= monthStart)
-      );
-    }).sort((a, b) => parseISO(a.check_in_date).getTime() - parseISO(b.check_in_date).getTime());
-  }, [reservations, currentMonth]);
+      // Iterate over each day of the reservation, excluding the checkout day itself
+      eachDayOfInterval({ start: checkIn, end: addDays(checkOut, -1) }).forEach(day => {
+        dates.push(day);
+      });
+    });
+    return dates;
+  }, [reservations]);
 
+  // Filter reservations for the selected date (or current month if no date selected)
+  const filteredReservations = useMemo(() => {
+    if (!selectedDate) {
+      // If no specific date is selected, show reservations for the current month
+      const monthStart = startOfMonth(currentMonth);
+      const monthEnd = endOfMonth(currentMonth);
+      return reservations.filter(res => {
+        const checkIn = parseISO(res.check_in_date);
+        const checkOut = parseISO(res.check_out_date);
+        return (checkIn <= monthEnd && checkOut >= monthStart);
+      }).sort((a, b) => parseISO(a.check_in_date).getTime() - parseISO(b.check_in_date).getTime());
+    } else {
+      // Show reservations for the selected date
+      return reservations.filter(res => {
+        const checkIn = parseISO(res.check_in_date);
+        const checkOut = parseISO(res.check_out_date);
+        // A reservation is relevant if the selected date is within its check-in and check-out period
+        return isSameDay(selectedDate, checkIn) || (selectedDate > checkIn && selectedDate < checkOut);
+      }).sort((a, b) => parseISO(a.check_in_date).getTime() - parseISO(b.check_in_date).getTime());
+    }
+  }, [reservations, selectedDate, currentMonth]);
+
+  const getStatusVariant = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'confirmed':
+      case 'confirmée':
+        return 'default';
+      case 'pending':
+      case 'en attente':
+        return 'secondary';
+      case 'cancelled':
+      case 'annulée':
+        return 'destructive';
+      default:
+        return 'outline';
+    }
+  };
 
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Calendrier</h1>
         
-        {isMobile ? (
-          <MobileBookingList reservations={currentMonthReservations} loading={loading} error={error} />
-        ) : (
-          <BookingPlanningGrid />
+        {loading && <p className="text-gray-500">Chargement des réservations...</p>}
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>Erreur</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {!loading && !error && (
+          <>
+            {isMobile ? (
+              <Card className="shadow-md mb-6">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold">Vue Calendrier</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    initialFocus
+                    modifiers={{ booked: bookedDays }}
+                    modifiersStyles={{
+                      booked: {
+                        backgroundColor: 'hsl(var(--primary))',
+                        color: 'hsl(var(--primary-foreground))',
+                        borderRadius: '0.25rem',
+                      },
+                    }}
+                    className="rounded-md border"
+                    month={currentMonth} // Control month display
+                    onMonthChange={setCurrentMonth} // Allow changing month
+                  />
+                  <div className="mt-6 w-full">
+                    <h3 className="text-xl font-semibold mb-4">
+                      Réservations pour {selectedDate ? format(selectedDate, 'dd MMMM yyyy', { locale: fr }) : 'le mois en cours'}
+                    </h3>
+                    {filteredReservations.length === 0 ? (
+                      <p className="text-gray-500">Aucune réservation trouvée pour cette période.</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {filteredReservations.map((booking) => (
+                          <div key={booking.id} className="border-b pb-4 last:border-b-0 last:pb-0">
+                            <div className="flex items-center justify-between mb-2">
+                              <h3 className="font-bold text-md">{booking.guest_name}</h3>
+                              <Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge>
+                            </div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                              <p className="flex items-center"><Home className="h-4 w-4 mr-2" /> {booking.property_name}</p>
+                              <p className="flex items-center"><CalendarDays className="h-4 w-4 mr-2" /> Du {format(parseISO(booking.check_in_date), 'dd/MM', { locale: fr })} au {format(parseISO(booking.check_out_date), 'dd/MM', { locale: fr })}</p>
+                              <p className="flex items-center"><DollarSign className="h-4 w-4 mr-2" /> {booking.amount} ({booking.cod_channel || 'N/A'})</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <BookingPlanningGrid />
+            )}
+          </>
         )}
         
-        {/* You can keep or remove the "Événements à venir" section as it's separate from the grid */}
         <Card className="shadow-md mt-6">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Événements à venir (Exemple)</CardTitle>
