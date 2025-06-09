@@ -216,7 +216,7 @@ const DashboardPage = () => {
             <CardContent className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={monthlyFinancialData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                  <CartesianGrid strokeDasharray="1 1" className="stroke-gray-200 dark:stroke-gray-700" /> {/* More subtle grid */}
                   <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                   <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
                   <Tooltip 
@@ -226,10 +226,10 @@ const DashboardPage = () => {
                     formatter={(value: number) => `${value}€`}
                   />
                   <Legend />
-                  <Line type="monotone" dataKey="ca" stroke="#8884d8" name="CA" activeDot={{ r: 8 }} /> {/* New CA line */}
-                  <Line type="monotone" dataKey="montantVerse" stroke="hsl(var(--primary))" name="Montant Versé" activeDot={{ r: 8 }} />
-                  <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" activeDot={{ r: 8 }} />
-                  <Line type="monotone" dataKey="benef" stroke="hsl(var(--accent))" name="Bénéfice" activeDot={{ r: 8 }} />
+                  <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} /> {/* No activeDot, custom stroke */}
+                  <Line type="monotone" dataKey="montantVerse" stroke="hsl(var(--secondary))" name="Montant Versé" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="benef" stroke="#22c55e" name="Bénéfice" strokeWidth={2} dot={false} /> {/* Green-500 for benefit */}
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
@@ -243,7 +243,7 @@ const DashboardPage = () => {
             <CardContent className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={reservationPerMonthData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                  <CartesianGrid strokeDasharray="1 1" className="stroke-gray-200 dark:stroke-gray-700" /> {/* More subtle grid */}
                   <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                   <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
                   <Tooltip 
@@ -252,7 +252,7 @@ const DashboardPage = () => {
                     itemStyle={{ color: 'hsl(var(--foreground))' }}
                   />
                   <Legend />
-                  <Line type="monotone" dataKey="reservations" stroke="hsl(var(--accent))" name="Réservations" activeDot={{ r: 8 }} />
+                  <Line type="monotone" dataKey="reservations" stroke="hsl(var(--accent))" name="Réservations" strokeWidth={2} dot={false} /> {/* No activeDot */}
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
@@ -266,7 +266,7 @@ const DashboardPage = () => {
             <CardContent className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={occupationRateData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                  <CartesianGrid strokeDasharray="1 1" className="stroke-gray-200 dark:stroke-gray-700" /> {/* More subtle grid */}
                   <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                   <YAxis unit="%" className="text-sm text-gray-600 dark:text-gray-400" />
                   <Tooltip 
@@ -276,7 +276,7 @@ const DashboardPage = () => {
                     formatter={(value: number) => `${value}%`}
                   />
                   <Legend />
-                  <Line type="monotone" dataKey="occupation" stroke="hsl(var(--secondary))" name="Occupation" activeDot={{ r: 8 }} />
+                  <Line type="monotone" dataKey="occupation" stroke="hsl(var(--secondary))" name="Occupation" strokeWidth={2} dot={false} /> {/* No activeDot */}
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
