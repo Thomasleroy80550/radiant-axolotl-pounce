@@ -86,70 +86,86 @@ async function callKrossbookingProxy(action: string, payload?: any): Promise<any
 }
 
 /**
- * Fetches reservations from Krossbooking API via the Supabase Edge Function proxy.
- * @param roomId Optional: The ID of the room/property to fetch reservations for. If not provided, fetches all reservations.
+ * Fetches reservations from Krossbooking API via the Supabase Edge Function proxy for multiple rooms.
+ * @param roomIds An array of Krossbooking room IDs to fetch reservations for.
  * @returns A promise that resolves to an array of KrossbookingReservation objects.
  */
-export async function fetchKrossbookingReservations(roomId?: string): Promise<KrossbookingReservation[]> {
-  const data = await callKrossbookingProxy('get_reservations', { id_room: roomId });
-  
-  if (Array.isArray(data)) {
-    return data.map((res: any) => {
-      const roomLabel = res.rooms?.[0]?.label || res.rooms?.[0]?.id_room?.toString() || 'N/A';
-      
-      return {
-        id: res.id_reservation.toString(), 
-        guest_name: res.label || 'N/A', 
-        property_name: roomLabel,
-        check_in_date: res.arrival || '', // Ensure it's a string
-        check_out_date: res.departure || '', // Ensure it's a string
-        status: res.cod_reservation_status, 
-        amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€', 
-        cod_channel: res.cod_channel,
-        ota_id: res.ota_id,
-        channel_identifier: res.cod_channel || 'UNKNOWN',
-      };
-    });
-  } else {
-    console.warn("Unexpected Krossbooking API response structure for reservations or no data array:", data);
-    return [];
+export async function fetchKrossbookingReservations(roomIds: string[]): Promise<KrossbookingReservation[]> {
+  let allReservations: KrossbookingReservation[] = [];
+  for (const roomId of roomIds) {
+    try {
+      const data = await callKrossbookingProxy('get_reservations', { id_room: roomId });
+      if (Array.isArray(data)) {
+        const roomReservations = data.map((res: any) => {
+          const roomLabel = res.rooms?.[0]?.label || res.rooms?.[0]?.id_room?.toString() || 'N/A';
+          return {
+            id: res.id_reservation.toString(), 
+            guest_name: res.label || 'N/A', 
+            property_name: roomLabel,
+            check_in_date: res.arrival || '', 
+            check_out_date: res.departure || '', 
+            status: res.cod_reservation_status, 
+            amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€', 
+            cod_channel: res.cod_channel,
+            ota_id: res.ota_id,
+            channel_identifier: res.cod_channel || 'UNKNOWN',
+          };
+        });
+        allReservations = allReservations.concat(roomReservations);
+      } else {
+        console.warn(`Unexpected Krossbooking API response structure for reservations for room ${roomId} or no data array:`, data);
+      }
+    } catch (error) {
+      console.error(`Error fetching reservations for room ${roomId}:`, error);
+      // Continue fetching for other rooms even if one fails
+    }
   }
+  return allReservations;
 }
 
 /**
- * Fetches housekeeping tasks from Krossbooking API via the Supabase Edge Function proxy.
+ * Fetches housekeeping tasks from Krossbooking API via the Supabase Edge Function proxy for multiple rooms.
  * @param dateFrom Start date (yyyy-mm-dd).
  * @param dateTo End date (yyyy-mm-dd).
+ * @param roomIds An array of Krossbooking room IDs to fetch tasks for.
  * @param idProperty Optional: The ID of the property to fetch tasks for.
- * @param idRoom Optional: The ID of the room to fetch tasks for.
  * @returns A promise that resolves to an array of KrossbookingHousekeepingTask objects.
  */
 export async function fetchKrossbookingHousekeepingTasks(
   dateFrom: string,
   dateTo: string,
+  roomIds: number[], // Changed to array of numbers
   idProperty?: number,
-  idRoom?: number
 ): Promise<KrossbookingHousekeepingTask[]> {
-  const data = await callKrossbookingProxy('get_housekeeping_tasks', {
-    date_from: dateFrom,
-    date_to: dateTo,
-    id_property: idProperty,
-    id_room: idRoom,
-  });
+  let allTasks: KrossbookingHousekeepingTask[] = [];
+  for (const roomId of roomIds) {
+    try {
+      const data = await callKrossbookingProxy('get_housekeeping_tasks', {
+        date_from: dateFrom,
+        date_to: dateTo,
+        id_property: idProperty,
+        id_room: roomId, // Pass single room ID per call
+      });
 
-  if (Array.isArray(data)) {
-    return data.map((task: any) => ({
-      id_task: task.id_task,
-      id_room: task.id_room,
-      room_label: task.room_label || 'N/A',
-      date: task.date || '', // Ensure it's a string
-      status: task.cod_status, // Assuming 'cod_status' is the status field
-      task_type: task.cod_task_type, // Assuming 'cod_task_type' is the task type field
-      notes: task.notes,
-      assigned_to: task.assigned_to,
-    }));
-  } else {
-    console.warn("Unexpected Krossbooking API response structure for housekeeping tasks or no data array:", data);
-    return [];
+      if (Array.isArray(data)) {
+        const roomTasks = data.map((task: any) => ({
+          id_task: task.id_task,
+          id_room: task.id_room,
+          room_label: task.room_label || 'N/A',
+          date: task.date || '', 
+          status: task.cod_status, 
+          task_type: task.cod_task_type, 
+          notes: task.notes,
+          assigned_to: task.assigned_to,
+        }));
+        allTasks = allTasks.concat(roomTasks);
+      } else {
+        console.warn(`Unexpected Krossbooking API response structure for housekeeping tasks for room ${roomId} or no data array:`, data);
+      }
+    } catch (error) {
+      console.error(`Error fetching housekeeping tasks for room ${roomId}:`, error);
+      // Continue fetching for other rooms even if one fails
+    }
   }
+  return allTasks;
 }
