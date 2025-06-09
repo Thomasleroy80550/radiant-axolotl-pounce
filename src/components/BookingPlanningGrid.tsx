@@ -44,6 +44,13 @@ const BookingPlanningGrid: React.FC = () => {
   const gridRef = useRef<HTMLDivElement>(null);
   const [gridContentWidth, setGridContentWidth] = useState(0);
 
+  // Déplacé useMemo pour daysInMonth avant les useEffect qui en dépendent
+  const daysInMonth = useMemo(() => {
+    const start = startOfMonth(currentMonth);
+    const end = endOfMonth(currentMonth);
+    return eachDayOfInterval({ start, end });
+  }, [currentMonth]);
+
   useEffect(() => {
     const loadReservationsAndTasks = async () => {
       setLoading(true);
@@ -85,12 +92,6 @@ const BookingPlanningGrid: React.FC = () => {
 
     return () => window.removeEventListener('resize', updateGridWidth);
   }, [daysInMonth.length]); // Recalculate if number of days changes (e.g., different month)
-
-  const daysInMonth = useMemo(() => {
-    const start = startOfMonth(currentMonth);
-    const end = endOfMonth(currentMonth);
-    return eachDayOfInterval({ start, end });
-  }, [currentMonth]);
 
   const goToPreviousMonth = () => {
     setCurrentMonth(subMonths(currentMonth, 1));
