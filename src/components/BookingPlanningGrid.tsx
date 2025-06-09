@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle, LogIn, LogOut } from 'lucide-react'; // Added LogIn, LogOut icons
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import { fetchKrossbookingReservations, fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask } from '@/lib/krossbooking'; // Import fetchKrossbookingHousekeepingTasks and KrossbookingHousekeepingTask
+import { fetchKrossbookingReservations, fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask } from '@/lib/krossbooking'; // Import fetchKrossbookingReservations and KrossbookingHousekeepingTask
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'; // Import Tooltip components
 
 interface KrossbookingReservation {
@@ -88,7 +88,7 @@ const BookingPlanningGrid: React.FC = () => {
 
   const dayCellWidth = 80; // px, width of each full day column
   const propertyColumnWidth = 150; // px, width of the property name column
-  const horizontalPadding = 8; // px, padding inside the cell for the bar to appear centered
+  // Removed horizontalPadding as it's now handled by inner padding and icon positioning
 
   // Function to get icon based on task status
   const getTaskIcon = (status: string) => {
@@ -209,10 +209,9 @@ const BookingPlanningGrid: React.FC = () => {
               {reservations
                 .map((reservation) => {
                   const checkIn = isValid(parseISO(reservation.check_in_date)) ? parseISO(reservation.check_in_date) : null;
-                  // Krossbooking check_out_date is the day the guest leaves, so the property is occupied on this day.
-                  const lastOccupiedDay = isValid(parseISO(reservation.check_out_date)) ? parseISO(reservation.check_out_date) : null;
+                  const checkOut = isValid(parseISO(reservation.check_out_date)) ? parseISO(reservation.check_out_date) : null;
 
-                  if (!checkIn || !lastOccupiedDay) {
+                  if (!checkIn || !checkOut) {
                     console.warn(`DEBUG: Skipping reservation ${reservation.id} due to invalid dates: check_in_date=${reservation.check_in_date}, check_out_date=${reservation.check_out_date}`);
                     return null;
                   }
@@ -222,34 +221,34 @@ const BookingPlanningGrid: React.FC = () => {
 
                   // Determine the effective visible start and end of the reservation bar within the current month
                   const visibleCheckIn = max([checkIn, monthStart]);
-                  const visibleLastOccupiedDay = min([lastOccupiedDay, monthEnd]);
+                  const visibleCheckOut = min([checkOut, monthEnd]);
 
                   // If reservation doesn't overlap with current month, don't render
-                  if (visibleCheckIn > visibleLastOccupiedDay) {
+                  if (visibleCheckIn > visibleCheckOut) {
                     return null;
                   }
 
                   const startIndex = daysInMonth.findIndex(d => isSameDay(d, visibleCheckIn));
-                  const endIndex = daysInMonth.findIndex(d => isSameDay(d, visibleLastOccupiedDay));
+                  const endIndex = daysInMonth.findIndex(d => isSameDay(d, visibleCheckOut));
 
                   if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
-                    console.warn(`DEBUG: Reservation ${reservation.id} dates not found in current month's days array or invalid range. Visible range: ${format(visibleCheckIn, 'yyyy-MM-dd')} to ${format(visibleLastOccupiedDay, 'yyyy-MM-dd')}. Start Index: ${startIndex}, End Index: ${endIndex}`);
+                    console.warn(`DEBUG: Reservation ${reservation.id} dates not found in current month's days array or invalid range. Visible range: ${format(visibleCheckIn, 'yyyy-MM-dd')} to ${format(visibleCheckOut, 'yyyy-MM-dd')}. Start Index: ${startIndex}, End Index: ${endIndex}`);
                     return null;
                   }
 
-                  // Calculate left position: property column width + (start day index * day cell width) + horizontal padding
-                  const barLeft = propertyColumnWidth + (startIndex * dayCellWidth) + horizontalPadding;
+                  // Calculate left position: property column width + (start day index * day cell width)
+                  const barLeft = propertyColumnWidth + (startIndex * dayCellWidth);
                   
-                  // Calculate width: (number of visible days) * day cell width - (2 * horizontal padding)
-                  const numberOfVisibleDays = differenceInDays(visibleLastOccupiedDay, visibleCheckIn) + 1; // +1 to include the end day
-                  const barWidth = (numberOfVisibleDays * dayCellWidth) - (2 * horizontalPadding);
+                  // Calculate width: (number of visible days) * day cell width
+                  const numberOfVisibleDays = differenceInDays(visibleCheckOut, visibleCheckIn) + 1; // +1 to include the end day
+                  const barWidth = (numberOfVisibleDays * dayCellWidth);
 
                   const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
-                  const numberOfNights = isValid(checkIn) && isValid(parseISO(reservation.check_out_date)) ? differenceInDays(parseISO(reservation.check_out_date), checkIn) : 0;
+                  const numberOfNights = isValid(checkIn) && isValid(checkOut) ? differenceInDays(checkOut, checkIn) : 0;
 
                   // Determine if the actual start/end of the reservation is visible in this month's view
                   const isActualStartVisible = isSameDay(checkIn, visibleCheckIn);
-                  const isActualEndVisible = isSameDay(lastOccupiedDay, visibleLastOccupiedDay);
+                  const isActualEndVisible = isSameDay(checkOut, visibleCheckOut);
 
                   return (
                     <div
@@ -266,6 +265,8 @@ const BookingPlanningGrid: React.FC = () => {
                         height: '36px', // Adjusted for better vertical centering
                         marginTop: '2px', // Small margin from the top of the grid row
                         marginBottom: '2px', // Small margin from the bottom of the grid row
+                        paddingLeft: isActualStartVisible ? '24px' : '8px', // Padding to make space for icon or just normal text
+                        paddingRight: isActualEndVisible ? '24px' : '8px', // Padding to make space for icon or just normal text
                       }}
                     >
                       {isActualStartVisible && (
@@ -280,7 +281,7 @@ const BookingPlanningGrid: React.FC = () => {
                           </TooltipContent>
                         </Tooltip>
                       )}
-                      <span className="flex-grow text-center px-2"> {/* Adjusted padding for text */}
+                      <span className="flex-grow text-center"> {/* No specific padding here, handled by parent div */}
                         <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
                         <span className="mr-1">€ {numberOfNights}</span>
                         <span className="mx-1">|</span>
