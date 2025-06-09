@@ -209,9 +209,8 @@ const BookingPlanningGrid: React.FC = () => {
               {reservations
                 .map((reservation) => {
                   const checkIn = isValid(parseISO(reservation.check_in_date)) ? parseISO(reservation.check_in_date) : null;
-                  // Krossbooking check_out_date is the day *after* the last occupied night.
-                  // So, the last occupied day is check_out_date - 1 day.
-                  const lastOccupiedDay = isValid(parseISO(reservation.check_out_date)) ? subDays(parseISO(reservation.check_out_date), 1) : null;
+                  // Krossbooking check_out_date is the day the guest leaves, so the property is occupied on this day.
+                  const lastOccupiedDay = isValid(parseISO(reservation.check_out_date)) ? parseISO(reservation.check_out_date) : null;
 
                   if (!checkIn || !lastOccupiedDay) {
                     console.warn(`DEBUG: Skipping reservation ${reservation.id} due to invalid dates: check_in_date=${reservation.check_in_date}, check_out_date=${reservation.check_out_date}`);
