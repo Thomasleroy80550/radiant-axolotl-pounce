@@ -80,7 +80,7 @@ serve(async (req) => {
     console.log("Successfully obtained Krossbooking auth token.");
 
     let action: string | undefined;
-    let requestedRoomId: string | undefined; // Décommenté et utilisé
+    let requestBody: any = {}; // Initialize requestBody
 
     const contentLength = req.headers.get('content-length');
     console.log(`Received Content-Length: ${contentLength}`);
@@ -90,9 +90,8 @@ serve(async (req) => {
       console.log(`Received Content-Type for POST: ${contentType}`);
       if (contentType && contentType.includes('application/json')) {
         try {
-          const requestBody = await req.json();
+          requestBody = await req.json();
           action = requestBody.action;
-          requestedRoomId = requestBody.id_room; // Récupère l'id_room du corps de la requête
         } catch (jsonParseError) {
           console.error("Error parsing request body as JSON:", jsonParseError);
           return new Response(JSON.stringify({ error: "Invalid JSON in request body." }), {
@@ -124,7 +123,7 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Received action: ${action}, requestedRoomId: ${requestedRoomId}`); 
+    console.log(`Received action: ${action}, requestBody:`, requestBody); 
 
     let krossbookingUrl = '';
     let krossbookingMethod = 'POST'; 
@@ -134,10 +133,27 @@ serve(async (req) => {
       const payload: any = {
         with_rooms: true, 
       };
-      if (requestedRoomId) { // Ajoute l'id_room au payload si présent
-        payload.id_room = requestedRoomId; 
+      if (requestBody.id_room) { 
+        payload.id_room = requestBody.id_room; 
       }
       krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
+      krossbookingBody = JSON.stringify(payload);
+    } else if (action === 'get_housekeeping_tasks') {
+      const { date_from, date_to, id_property, id_room } = requestBody;
+      if (!date_from || !date_to) {
+        throw new Error("Missing required parameters: date_from and date_to for get_housekeeping_tasks.");
+      }
+      const payload: any = {
+        date_from,
+        date_to,
+      };
+      if (id_property) {
+        payload.id_property = id_property;
+      }
+      if (id_room) {
+        payload.id_room = id_room;
+      }
+      krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/housekeeping/get-tasks`;
       krossbookingBody = JSON.stringify(payload);
     } else {
       throw new Error(`Unsupported action: ${action}`);
