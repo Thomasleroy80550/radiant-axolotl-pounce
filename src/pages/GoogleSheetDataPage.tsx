@@ -17,9 +17,9 @@ const GoogleSheetDataPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        // Request data from column A to DF, and limit to row 5
-        const data = await callGSheetProxy({ action: 'read_sheet', range: 'A:DF5' }); 
-        console.log("DEBUG (Frontend): Données reçues du proxy Google Sheet:", data); // Added log
+        // Request data from column A to DF, for all rows that contain data
+        const data = await callGSheetProxy({ action: 'read_sheet', range: 'A:DF' }); 
+        console.log("DEBUG (Frontend): Données reçues du proxy Google Sheet:", data);
         setSheetData(data);
         toast.success("Données du Google Sheet chargées !");
       } catch (err: any) {
