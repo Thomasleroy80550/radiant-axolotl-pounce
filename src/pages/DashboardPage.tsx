@@ -324,8 +324,8 @@ const DashboardPage = () => {
                             data={activityData}
                             cx="50%"
                             cy="50%"
-                            innerRadius={90} // Reduced inner radius
-                            outerRadius={120} // Reduced outer radius
+                            innerRadius={40} // Reduced inner radius
+                            outerRadius={90} // Reduced outer radius
                             fill="#8884d8"
                             paddingAngle={5}
                             dataKey="value"
