@@ -70,6 +70,7 @@ const DashboardPage = () => {
           { name: 'Hello Keys', value: isNaN(helloKeysValue) ? 0 : helloKeysValue, color: '#0e7490' },
           { name: 'Proprio', value: isNaN(proprioValue) ? 0 : proprioValue, color: '#4f46e5' },
         ]);
+        console.log("DEBUG: Activity Data fetched:", data);
       } else {
         setActivityDataError("Format de données inattendu pour l'activité de location.");
       }
@@ -314,28 +315,31 @@ const DashboardPage = () => {
                 </Alert>
               ) : (
                 <>
-                  <ResponsiveContainer width="100%" height={280} className="md:w-3/5">
-                    <PieChart isAnimationActive={true}>
-                      <Pie
-                        data={activityData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={90}
-                        outerRadius={120}
-                        fill="#8884d8"
-                        paddingAngle={5}
-                        dataKey="value"
-                        animationDuration={1000}
-                        animationEasing="ease-in-out"
-                      >
-                        {activityData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="text-sm space-y-2 mt-4 md:mt-0 md:w-2/5 flex flex-col items-start">
+                  {/* Wrapper div with fixed height for ResponsiveContainer */}
+                  <div className="w-full md:w-3/5" style={{ height: '300px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart isAnimationActive={true}>
+                        <Pie
+                          data={activityData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={100}
+                          outerRadius={140}
+                          fill="#8884d8"
+                          paddingAngle={5}
+                          dataKey="value"
+                          animationDuration={1000}
+                          animationEasing="ease-in-out"
+                        >
+                          {activityData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="text-sm space-y-2 mt-4 md:mt-0 md:ml-4 md:w-2/5 flex flex-col items-start">
                     {activityData.map((item) => (
                       <div key={item.name} className="flex items-center">
                         <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: item.color }}></span>
