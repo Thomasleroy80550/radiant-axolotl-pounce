@@ -46,6 +46,10 @@ const DashboardPage = () => {
   const [loadingFinancialData, setLoadingFinancialData] = useState(true);
   const [financialDataError, setFinancialDataError] = useState<string | null>(null);
 
+  const [monthlyFinancialData, setMonthlyFinancialData] = useState<any[]>([]);
+  const [loadingMonthlyFinancialData, setLoadingMonthlyFinancialData] = useState(true);
+  const [monthlyFinancialDataError, setMonthlyFinancialDataError] = useState<string | null>(null);
+
   useEffect(() => {
     const fetchActivityData = async () => {
       setLoadingActivityData(true);
@@ -114,25 +118,47 @@ const DashboardPage = () => {
       }
     };
 
+    const fetchMonthlyFinancialData = async () => {
+      setLoadingMonthlyFinancialData(true);
+      setMonthlyFinancialDataError(null);
+      try {
+        // Fetch all required ranges in one call
+        const data = await callGSheetProxy({ action: 'read_sheet', range: 'BU2:CF5' });
+        console.log("DEBUG (DashboardPage): Fetched monthly financial data from GSheet:", data);
+
+        if (data && data.length >= 4) {
+          const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+          const caValues = data[0] || [];
+          const montantVerseValues = data[1] || [];
+          const fraisValues = data[2] || [];
+          const benefValues = data[3] || [];
+
+          const formattedData = months.map((month, index) => ({
+            name: month,
+            ca: parseFloat(caValues[index]) || 0,
+            montantVerse: parseFloat(montantVerseValues[index]) || 0,
+            frais: parseFloat(fraisValues[index]) || 0,
+            benef: parseFloat(benefValues[index]) || 0,
+          }));
+          setMonthlyFinancialData(formattedData);
+          toast.success("Statistiques financières mensuelles mises à jour !");
+        } else {
+          setMonthlyFinancialDataError("Format de données inattendu pour les statistiques financières mensuelles.");
+          toast.error("Erreur: Format de données inattendu pour les statistiques financières mensuelles.");
+        }
+      } catch (err: any) {
+        setMonthlyFinancialDataError(`Erreur lors du chargement des statistiques financières mensuelles : ${err.message}`);
+        toast.error(`Erreur: ${err.message}`);
+        console.error("Error fetching monthly financial data:", err);
+      } finally {
+        setLoadingMonthlyFinancialData(false);
+      }
+    };
+
     fetchActivityData();
     fetchFinancialData();
+    fetchMonthlyFinancialData();
   }, []); // Empty dependency array means this runs once on mount
-
-  // Monthly Financial Data for Line Chart (kept as hardcoded for now)
-  const monthlyFinancialData = [
-    { name: 'Jan', montantVerse: 2500, frais: 500, benef: 2000, ca: 3000 },
-    { name: 'Fév', montantVerse: 2800, frais: 550, benef: 2250, ca: 3350 },
-    { name: 'Mar', montantVerse: 2200, frais: 450, benef: 1750, ca: 2650 },
-    { name: 'Avr', montantVerse: 3000, frais: 600, benef: 2400, ca: 3600 },
-    { name: 'Mai', montantVerse: 2700, frais: 520, benef: 2180, ca: 3220 },
-    { name: 'Juin', montantVerse: 3200, frais: 650, benef: 2550, ca: 3850 },
-    { name: 'Juil', montantVerse: 3500, frais: 700, benef: 2800, ca: 4200 },
-    { name: 'Août', montantVerse: 3800, frais: 750, benef: 3050, ca: 4550 },
-    { name: 'Sep', montantVerse: 3100, frais: 620, benef: 2480, ca: 3720 },
-    { name: 'Oct', montantVerse: 2900, frais: 580, benef: 2320, ca: 3480 },
-    { name: 'Nov', montantVerse: 3300, frais: 660, benef: 2640, ca: 3960 },
-    { name: 'Déc', montantVerse: 3600, frais: 720, benef: 2880, ca: 4320 },
-  ];
 
   const reservationPerMonthData = [
     { name: 'Jan', reservations: 10 },
@@ -327,24 +353,34 @@ const DashboardPage = () => {
               <CardTitle className="text-lg font-semibold">Statistiques Financières Mensuelles</CardTitle>
             </CardHeader>
             <CardContent className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={monthlyFinancialData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
-                  <CartesianGrid strokeDasharray="1 1" className="stroke-gray-200 dark:stroke-gray-700" />
-                  <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
-                  <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
-                    labelStyle={{ color: 'hsl(var(--foreground))' }}
-                    itemStyle={{ color: 'hsl(var(--foreground))' }}
-                    formatter={(value: number) => `${value}€`}
-                  />
-                  <Legend />
-                  <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
-                  <Line type="monotone" dataKey="montantVerse" stroke="hsl(var(--secondary))" name="Montant Versé" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
-                  <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
-                  <Line type="monotone" dataKey="benef" stroke="#22c55e" name="Bénéfice" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
-                </LineChart>
-              </ResponsiveContainer>
+              {loadingMonthlyFinancialData ? (
+                <p className="text-gray-500">Chargement des statistiques mensuelles...</p>
+              ) : monthlyFinancialDataError ? (
+                <Alert variant="destructive">
+                  <Terminal className="h-4 w-4" />
+                  <AlertTitle>Erreur de chargement</AlertTitle>
+                  <AlertDescription>{monthlyFinancialDataError}</AlertDescription>
+                </Alert>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={monthlyFinancialData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
+                    <CartesianGrid strokeDasharray="1 1" className="stroke-gray-200 dark:stroke-gray-700" />
+                    <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
+                    <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                      itemStyle={{ color: 'hsl(var(--foreground))' }}
+                      formatter={(value: number) => `${value}€`}
+                    />
+                    <Legend />
+                    <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" dataKey="montantVerse" stroke="hsl(var(--secondary))" name="Montant Versé" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" dataKey="benef" stroke="#22c55e" name="Bénéfice" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
 
