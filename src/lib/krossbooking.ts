@@ -101,8 +101,8 @@ export async function fetchKrossbookingReservations(roomId?: string): Promise<Kr
         id: res.id_reservation.toString(), 
         guest_name: res.label || 'N/A', 
         property_name: roomLabel,
-        check_in_date: res.arrival, 
-        check_out_date: res.departure, 
+        check_in_date: res.arrival || '', // Ensure it's a string
+        check_out_date: res.departure || '', // Ensure it's a string
         status: res.cod_reservation_status, 
         amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€', 
         cod_channel: res.cod_channel,
@@ -142,7 +142,7 @@ export async function fetchKrossbookingHousekeepingTasks(
       id_task: task.id_task,
       id_room: task.id_room,
       room_label: task.room_label || 'N/A',
-      date: task.date,
+      date: task.date || '', // Ensure it's a string
       status: task.cod_status, // Assuming 'cod_status' is the status field
       task_type: task.cod_task_type, // Assuming 'cod_task_type' is the task type field
       notes: task.notes,
