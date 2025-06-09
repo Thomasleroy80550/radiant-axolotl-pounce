@@ -68,8 +68,8 @@ const GoogleSheetDataPage: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {/* Render all rows, including the first one (which is also used as header) */}
-                    {sheetData.map((row, rowIndex) => (
+                    {/* Render all rows, starting from the second one (index 1) */}
+                    {sheetData.slice(1).map((row, rowIndex) => (
                       <TableRow key={rowIndex}>
                         {row.map((cell, cellIndex) => (
                           <TableCell key={cellIndex}>{cell}</TableCell>
