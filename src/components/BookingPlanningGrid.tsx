@@ -77,6 +77,7 @@ const BookingPlanningGrid: React.FC = () => {
 
   const dayCellWidth = 80; // px, width of each full day column
   const propertyColumnWidth = 150; // px, width of the property name column
+  const halfDayWidth = dayCellWidth / 2; // Represents half a day for arrival/departure
 
   return (
     <Card className="shadow-md">
@@ -183,26 +184,31 @@ const BookingPlanningGrid: React.FC = () => {
                     return null;
                   }
 
-                  // Calculate left position: property column width + (start day index * day cell width)
-                  const barLeft = propertyColumnWidth + (startIndex * dayCellWidth);
-                  
-                  // Calculate width: (number of days in reservation) * day cell width
-                  const numberOfDaysInBar = differenceInDays(visibleLastNight, visibleCheckIn) + 1;
-                  const barWidth = numberOfDaysInBar * dayCellWidth;
-
-                  // Determine rounding classes based on original check-in/check-out and visible range
+                  let barLeft = propertyColumnWidth + (startIndex * dayCellWidth);
+                  let barWidth = (endIndex - startIndex + 1) * dayCellWidth;
                   let barBorderClasses = '';
-                  if (isSameDay(checkIn, visibleCheckIn)) {
-                    barBorderClasses += ' rounded-l-full';
-                  }
-                  if (isSameDay(lastNight, visibleLastNight)) {
-                    barBorderClasses += ' rounded-r-full';
-                  }
-                  // If it's a single day booking, it should be fully rounded
-                  if (isSameDay(checkIn, lastNight)) {
-                    barBorderClasses = ' rounded-full';
-                  }
 
+                  const isOriginalCheckInVisible = isSameDay(checkIn, visibleCheckIn);
+                  const isOriginalLastNightVisible = isSameDay(lastNight, visibleLastNight);
+                  const isSingleDayBooking = isSameDay(checkIn, lastNight);
+
+                  if (isSingleDayBooking) {
+                    // For single-day bookings, center the bar and make it half width, fully rounded
+                    barLeft += halfDayWidth / 2;
+                    barWidth = dayCellWidth - halfDayWidth;
+                    barBorderClasses = ' rounded-full';
+                  } else {
+                    // Multi-day booking adjustments
+                    if (isOriginalCheckInVisible) {
+                      barLeft += halfDayWidth; // Start from mid-day
+                      barWidth -= halfDayWidth;
+                      barBorderClasses += ' rounded-l-full';
+                    }
+                    if (isOriginalLastNightVisible) {
+                      barWidth -= halfDayWidth; // End mid-day
+                      barBorderClasses += ' rounded-r-full';
+                    }
+                  }
 
                   const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
                   const numberOfNights = differenceInDays(checkOut, checkIn);
