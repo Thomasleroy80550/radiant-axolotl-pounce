@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfYear, endOfYear } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { getUserRooms, UserRoom } from '@/lib/user-room-api'; // Import user room API
 
 interface Booking {
   id: string;
@@ -20,22 +21,30 @@ interface Booking {
   cod_channel?: string;
 }
 
-// Définir l'ID et le nom de la chambre à afficher sur cette page
-const targetRoomId = '62'; 
-const targetRoomName = 'Chambre 62'; 
-
 const BookingsPage: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
 
   useEffect(() => {
     const loadBookings = async () => {
       setLoading(true);
       setError(null);
       try {
-        const fetchedBookings = await fetchKrossbookingReservations(targetRoomId);
-        console.log(`Fetched bookings for BookingsPage (Room ${targetRoomId}):`, fetchedBookings);
+        const fetchedUserRooms = await getUserRooms();
+        setUserRooms(fetchedUserRooms);
+
+        const roomIds = fetchedUserRooms.map(room => room.room_id);
+
+        if (roomIds.length === 0) {
+          setBookings([]);
+          setLoading(false);
+          return;
+        }
+
+        const fetchedBookings = await fetchKrossbookingReservations(roomIds);
+        console.log(`Fetched bookings for BookingsPage (Rooms: ${roomIds.join(', ')}):`, fetchedBookings);
 
         const currentYear = new Date().getFullYear();
         const yearStart = startOfYear(new Date(currentYear, 0, 1));
@@ -56,7 +65,7 @@ const BookingsPage: React.FC = () => {
 
         setBookings(sortedBookings);
       } catch (err: any) {
-        setError(`Erreur lors du chargement des réservations pour la chambre ${targetRoomName} : ${err.message}`);
+        setError(`Erreur lors du chargement des réservations : ${err.message}`);
         console.error("Error in loadBookings for BookingsPage:", err);
       } finally {
         setLoading(false);
@@ -87,7 +96,7 @@ const BookingsPage: React.FC = () => {
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
-        <h1 className="text-3xl font-bold mb-6">Réservations pour {targetRoomName} ({currentYear})</h1>
+        <h1 className="text-3xl font-bold mb-6">Réservations pour {userRooms.length > 0 ? 'vos chambres' : 'les chambres'} ({currentYear})</h1>
         <Card className="shadow-md">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Liste de vos réservations</CardTitle>
@@ -101,8 +110,13 @@ const BookingsPage: React.FC = () => {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            {!loading && !error && bookings.length === 0 && (
-              <p className="text-gray-500">Aucune réservation trouvée pour la chambre {targetRoomName} en {currentYear}.</p>
+            {!loading && !error && userRooms.length === 0 && (
+              <p className="text-gray-500">
+                Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour voir les réservations ici.
+              </p>
+            )}
+            {!loading && !error && userRooms.length > 0 && bookings.length === 0 && (
+              <p className="text-gray-500">Aucune réservation trouvée pour vos chambres en {currentYear}.</p>
             )}
             {!loading && !error && bookings.length > 0 && (
               <div className="overflow-x-auto">
