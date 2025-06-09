@@ -172,14 +172,6 @@ const BookingPlanningGrid: React.FC = () => {
                   isValid(parseISO(task.date)) && isSameDay(parseISO(task.date), day) && task.id_room.toString() === defaultRoomId
                 );
 
-                // Check for arrival/departure on this specific day
-                const isArrivalDay = reservations.some(res => 
-                  isValid(parseISO(res.check_in_date)) && isSameDay(parseISO(res.check_in_date), day) && res.property_name === defaultRoomId
-                );
-                const isDepartureDay = reservations.some(res => 
-                  isValid(parseISO(res.check_out_date)) && isSameDay(parseISO(res.check_out_date), day) && res.property_name === defaultRoomId
-                );
-
                 return (
                   <div
                     key={`${defaultRoomId}-${format(day, 'yyyy-MM-dd')}-bg`}
@@ -205,30 +197,6 @@ const BookingPlanningGrid: React.FC = () => {
                               <span className="ml-1 capitalize">{task.task_type.replace('_', ' ')} - {task.status}</span>
                             </p>
                           ))}
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                    {isArrivalDay && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="absolute bottom-1 left-1 flex items-center justify-center w-5 h-5 rounded-full bg-green-200 dark:bg-green-700 cursor-pointer">
-                            <LogIn className="h-3 w-3 text-green-800 dark:text-green-200" />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent className="p-2 text-sm">
-                          Jour d'arrivée
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                    {isDepartureDay && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="absolute bottom-1 right-1 flex items-center justify-center w-5 h-5 rounded-full bg-red-200 dark:bg-red-700 cursor-pointer">
-                            <LogOut className="h-3 w-3 text-red-800 dark:text-red-200" />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent className="p-2 text-sm">
-                          Jour de départ
                         </TooltipContent>
                       </Tooltip>
                     )}
@@ -274,22 +242,13 @@ const BookingPlanningGrid: React.FC = () => {
                   const numberOfVisibleDays = differenceInDays(visibleCheckOut, visibleCheckIn) + 1; // +1 to include the end day
                   const barWidth = numberOfVisibleDays * dayCellWidth;
 
-                  // Determine rounding classes
-                  let barBorderClasses = '';
-                  if (isSameDay(checkIn, visibleCheckIn)) {
-                    barBorderClasses += ' rounded-l-full';
-                  }
-                  if (isSameDay(checkOut, visibleCheckOut)) {
-                    barBorderClasses += ' rounded-r-full';
-                  }
-
                   const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
                   const numberOfNights = isValid(checkIn) && isValid(checkOut) ? differenceInDays(checkOut, checkIn) : 0;
 
                   return (
                     <div
                       key={reservation.id}
-                      className={`absolute h-9 flex items-center justify-start text-xs font-semibold overflow-hidden whitespace-nowrap px-2 ${channelInfo.bgColor} ${channelInfo.textColor} ${barBorderClasses} shadow-sm cursor-pointer hover:opacity-90 transition-opacity`}
+                      className={`absolute h-9 flex items-center text-xs font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm cursor-pointer hover:opacity-90 transition-opacity rounded-full`} // Always rounded-full for consistency
                       style={{
                         gridRow: '3', // Always on the third row (after two header rows)
                         left: `${barLeft}px`,
@@ -298,12 +257,37 @@ const BookingPlanningGrid: React.FC = () => {
                         marginTop: '2px', // Small margin from the top of the grid row
                         marginBottom: '2px', // Small margin from the bottom of the grid row
                       }}
-                      title={`${reservation.guest_name} (${channelInfo.name}, ${reservation.status}) - Du ${format(checkIn, 'dd/MM/yyyy', { locale: fr })} au ${format(checkOut, 'dd/MM/yyyy', { locale: fr })}`}
                     >
-                      <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
-                      <span className="mr-1">€ {numberOfNights}</span>
-                      <span className="mx-1">|</span>
-                      <span className="truncate">{reservation.guest_name}</span>
+                      {isSameDay(checkIn, visibleCheckIn) && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="absolute left-0 top-0 bottom-0 flex items-center px-1 bg-black bg-opacity-20 rounded-l-full">
+                              <LogIn className="h-4 w-4 text-white" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="p-2 text-sm">
+                            Jour d'arrivée
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                      <span className="flex-grow text-center px-2"> {/* Adjusted padding for text */}
+                        <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
+                        <span className="mr-1">€ {numberOfNights}</span>
+                        <span className="mx-1">|</span>
+                        <span className="truncate">{reservation.guest_name}</span>
+                      </span>
+                      {isSameDay(checkOut, visibleCheckOut) && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="absolute right-0 top-0 bottom-0 flex items-center px-1 bg-black bg-opacity-20 rounded-r-full">
+                              <LogOut className="h-4 w-4 text-white" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="p-2 text-sm">
+                            Jour de départ
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
                   );
                 })}
@@ -345,12 +329,12 @@ const BookingPlanningGrid: React.FC = () => {
               <span className="text-sm text-gray-700 dark:text-gray-300">Plusieurs tâches</span>
             </div>
             <div className="flex items-center">
-              <LogIn className="h-4 w-4 mr-2 text-green-800 dark:text-green-200" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Jour d'arrivée</span>
+              <LogIn className="h-4 w-4 mr-2 text-white bg-green-600 rounded-full p-0.5" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">Jour d'arrivée (sur la réservation)</span>
             </div>
             <div className="flex items-center">
-              <LogOut className="h-4 w-4 mr-2 text-red-800 dark:text-red-200" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Jour de départ</span>
+              <LogOut className="h-4 w-4 mr-2 text-white bg-red-600 rounded-full p-0.5" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">Jour de départ (sur la réservation)</span>
             </div>
           </div>
         </div>
