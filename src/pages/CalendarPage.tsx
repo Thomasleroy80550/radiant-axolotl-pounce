@@ -164,11 +164,12 @@ const CalendarPage: React.FC = () => {
                         {filteredReservations.map((booking) => {
                           const channelInfo = channelColors[booking.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
                           return (
-                            <Card key={booking.id} className="shadow-sm border border-gray-200 dark:border-gray-700">
-                              <CardContent className="p-4">
+                            <Card key={booking.id} className="shadow-sm border border-gray-200 dark:border-gray-700 relative overflow-hidden">
+                              <div className={`absolute left-0 top-0 bottom-0 w-2 ${channelInfo.bgColor}`}></div> {/* Colored bar on the left */}
+                              <CardContent className="p-4 pl-6"> {/* Adjust padding to account for the bar */}
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center">
-                                    <span className={`w-3 h-3 rounded-full mr-2 ${channelInfo.bgColor}`}></span>
+                                    {/* Removed the small rounded-full span here as the left bar will serve this purpose */}
                                     <h3 className="font-bold text-md">{booking.guest_name}</h3>
                                   </div>
                                   <Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge>
