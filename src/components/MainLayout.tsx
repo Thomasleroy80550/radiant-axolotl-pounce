@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useSession } from '@/components/SessionContextProvider'; // Import useSession
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -89,6 +90,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
+  const { session } = useSession(); // Get session from context
 
   const handleLinkClick = () => {
     if (isMobile) {
@@ -154,7 +156,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">Thomas</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      m@example.com
+                      {session?.user?.email || 'N/A'}
                     </p>
                   </div>
                 </DropdownMenuLabel>
