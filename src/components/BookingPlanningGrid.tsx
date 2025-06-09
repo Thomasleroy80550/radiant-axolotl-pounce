@@ -158,44 +158,51 @@ const BookingPlanningGrid: React.FC = () => {
               {reservations
                 .map((reservation) => {
                   const checkIn = parseISO(reservation.check_in_date);
-                  const checkOut = parseISO(reservation.check_out_date);
+                  const checkOut = parseISO(reservation.check_out_date); // This is the day *after* the last night
 
                   const monthStart = startOfMonth(currentMonth);
                   const monthEnd = endOfMonth(currentMonth);
 
                   // Determine the effective visible start and end of the reservation bar within the current month
+                  // The bar should end on the *last night* of the stay, which is checkOut - 1 day
+                  const lastNight = addDays(checkOut, -1);
+
                   const visibleCheckIn = checkIn < monthStart ? monthStart : checkIn;
-                  const visibleCheckOut = checkOut > monthEnd ? monthEnd : checkOut;
+                  const visibleLastNight = lastNight > monthEnd ? monthEnd : lastNight;
 
                   // If reservation doesn't overlap with current month, don't render
-                  if (visibleCheckIn > visibleCheckOut) {
+                  if (visibleCheckIn > visibleLastNight) {
                     return null;
                   }
 
                   const startIndex = daysInMonth.findIndex(d => isSameDay(d, visibleCheckIn));
-                  const endIndex = daysInMonth.findIndex(d => isSameDay(d, visibleCheckOut));
+                  const endIndex = daysInMonth.findIndex(d => isSameDay(d, visibleLastNight));
 
                   if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
-                    console.warn(`DEBUG: Reservation ${reservation.id} dates not found in current month's days array or invalid range. Visible range: ${format(visibleCheckIn, 'yyyy-MM-dd')} to ${format(visibleCheckOut, 'yyyy-MM-dd')}. Start Index: ${startIndex}, End Index: ${endIndex}`);
+                    console.warn(`DEBUG: Reservation ${reservation.id} dates not found in current month's days array or invalid range. Visible range: ${format(visibleCheckIn, 'yyyy-MM-dd')} to ${format(visibleLastNight, 'yyyy-MM-dd')}. Start Index: ${startIndex}, End Index: ${endIndex}`);
                     return null;
                   }
 
-                  // Calculate left position: property column width + (start day index * day cell width) + half of day cell width
-                  const barLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 2);
+                  // Calculate left position: property column width + (start day index * day cell width)
+                  const barLeft = propertyColumnWidth + (startIndex * dayCellWidth);
                   
-                  // Calculate width: (end day index - start day index) * day cell width
-                  // This spans from the start of the start day to the start of the end day.
-                  // We need to add half a day cell width to the end to reach the middle of the end day.
-                  const barWidth = (endIndex - startIndex) * dayCellWidth;
+                  // Calculate width: (number of days in reservation) * day cell width
+                  const numberOfDaysInBar = differenceInDays(visibleLastNight, visibleCheckIn) + 1;
+                  const barWidth = numberOfDaysInBar * dayCellWidth;
 
-                  // Determine rounding classes
+                  // Determine rounding classes based on original check-in/check-out and visible range
                   let barBorderClasses = '';
                   if (isSameDay(checkIn, visibleCheckIn)) {
                     barBorderClasses += ' rounded-l-full';
                   }
-                  if (isSameDay(checkOut, visibleCheckOut)) {
+                  if (isSameDay(lastNight, visibleLastNight)) {
                     barBorderClasses += ' rounded-r-full';
                   }
+                  // If it's a single day booking, it should be fully rounded
+                  if (isSameDay(checkIn, lastNight)) {
+                    barBorderClasses = ' rounded-full';
+                  }
+
 
                   const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
                   const numberOfNights = differenceInDays(checkOut, checkIn);
@@ -212,7 +219,7 @@ const BookingPlanningGrid: React.FC = () => {
                         marginTop: '2px', // Small margin from the top of the grid row
                         marginBottom: '2px', // Small margin from the bottom of the grid row
                       }}
-                      title={`${reservation.guest_name} (${channelInfo.name}, ${reservation.status}) - Du ${format(checkIn, 'dd/MM', { locale: fr })} au ${format(checkOut, 'dd/MM', { locale: fr })}`}
+                      title={`${reservation.guest_name} (${channelInfo.name}, ${reservation.status}) - Du ${format(checkIn, 'dd/MM', { locale: fr })} au ${format(addDays(checkOut, -1), 'dd/MM', { locale: fr })} (Départ le ${format(checkOut, 'dd/MM', { locale: fr })})`}
                     >
                       <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
                       <span className="mr-1">€ {numberOfNights}</span>
