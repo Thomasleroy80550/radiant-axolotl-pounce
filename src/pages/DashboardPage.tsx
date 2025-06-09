@@ -8,8 +8,8 @@ import {
   PieChart,
   Pie,
   Cell,
-  BarChart,
-  Bar,
+  LineChart, // Changed from BarChart
+  Line,       // Changed from Bar
   XAxis,
   YAxis,
   CartesianGrid,
@@ -29,20 +29,20 @@ const DashboardPage = () => {
     { name: 'Hello Keys', value: 100, color: '#16a34a' }, // green-600
   ];
 
-  // Monthly Data for Bar Charts
-  const monthlyStatsData = [
-    { name: 'Jan', value: 4000 },
-    { name: 'Fév', value: 3000 },
-    { name: 'Mar', value: 2000 },
-    { name: 'Avr', value: 2780 },
-    { name: 'Mai', value: 1890 },
-    { name: 'Juin', value: 2390 },
-    { name: 'Juil', value: 3490 },
-    { name: 'Août', value: 4200 },
-    { name: 'Sep', value: 3800 },
-    { name: 'Oct', value: 2900 },
-    { name: 'Nov', value: 3100 },
-    { name: 'Déc', value: 3500 },
+  // Monthly Financial Data for Line Chart
+  const monthlyFinancialData = [
+    { name: 'Jan', montantVerse: 2500, frais: 500, benef: 2000 },
+    { name: 'Fév', montantVerse: 2800, frais: 550, benef: 2250 },
+    { name: 'Mar', montantVerse: 2200, frais: 450, benef: 1750 },
+    { name: 'Avr', montantVerse: 3000, frais: 600, benef: 2400 },
+    { name: 'Mai', montantVerse: 2700, frais: 520, benef: 2180 },
+    { name: 'Juin', montantVerse: 3200, frais: 650, benef: 2550 },
+    { name: 'Juil', montantVerse: 3500, frais: 700, benef: 2800 },
+    { name: 'Août', montantVerse: 3800, frais: 750, benef: 3050 },
+    { name: 'Sep', montantVerse: 3100, frais: 620, benef: 2480 },
+    { name: 'Oct', montantVerse: 2900, frais: 580, benef: 2320 },
+    { name: 'Nov', montantVerse: 3300, frais: 660, benef: 2640 },
+    { name: 'Déc', montantVerse: 3600, frais: 720, benef: 2880 },
   ];
 
   const reservationPerMonthData = [
@@ -208,14 +208,14 @@ const DashboardPage = () => {
             </CardContent>
           </Card>
 
-          {/* Statistics Card (Bar Chart) */}
+          {/* Statistiques Card (Line Chart for Financial Data) */}
           <Card className="shadow-md col-span-full lg:col-span-1">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Statistiques</CardTitle>
+              <CardTitle className="text-lg font-semibold">Statistiques Financières Mensuelles</CardTitle>
             </CardHeader>
             <CardContent className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyStatsData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <LineChart data={monthlyFinancialData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
                   <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                   <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
@@ -223,22 +223,25 @@ const DashboardPage = () => {
                     contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
                     labelStyle={{ color: 'hsl(var(--foreground))' }}
                     itemStyle={{ color: 'hsl(var(--foreground))' }}
+                    formatter={(value: number) => `${value}€`}
                   />
                   <Legend />
-                  <Bar dataKey="value" fill="hsl(var(--primary))" name="Valeur" />
-                </BarChart>
+                  <Line type="monotone" dataKey="montantVerse" stroke="hsl(var(--primary))" name="Montant Versé" activeDot={{ r: 8 }} />
+                  <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" activeDot={{ r: 8 }} />
+                  <Line type="monotone" dataKey="benef" stroke="hsl(var(--accent))" name="Bénéfice" activeDot={{ r: 8 }} />
+                </LineChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          {/* Réservation / mois Card (Bar Chart) */}
+          {/* Réservation / mois Card (Line Chart) */}
           <Card className="shadow-md col-span-full lg:col-span-1">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Réservation / mois</CardTitle>
             </CardHeader>
             <CardContent className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={reservationPerMonthData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <LineChart data={reservationPerMonthData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
                   <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                   <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
@@ -248,20 +251,20 @@ const DashboardPage = () => {
                     itemStyle={{ color: 'hsl(var(--foreground))' }}
                   />
                   <Legend />
-                  <Bar dataKey="reservations" fill="hsl(var(--accent))" name="Réservations" />
-                </BarChart>
+                  <Line type="monotone" dataKey="reservations" stroke="hsl(var(--accent))" name="Réservations" activeDot={{ r: 8 }} />
+                </LineChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          {/* Occupation Card (Bar Chart) */}
+          {/* Occupation Card (Line Chart) */}
           <Card className="shadow-md col-span-full lg:col-span-1">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Occupation</CardTitle>
             </CardHeader>
             <CardContent className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={occupationRateData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <LineChart data={occupationRateData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
                   <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                   <YAxis unit="%" className="text-sm text-gray-600 dark:text-gray-400" />
@@ -272,8 +275,8 @@ const DashboardPage = () => {
                     formatter={(value: number) => `${value}%`}
                   />
                   <Legend />
-                  <Bar dataKey="occupation" fill="hsl(var(--secondary))" name="Occupation" />
-                </BarChart>
+                  <Line type="monotone" dataKey="occupation" stroke="hsl(var(--secondary))" name="Occupation" activeDot={{ r: 8 }} />
+                </LineChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
