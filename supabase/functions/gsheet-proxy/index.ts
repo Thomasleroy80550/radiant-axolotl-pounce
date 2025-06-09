@@ -11,21 +11,20 @@ const corsHeaders = {
 async function getGoogleAccessToken(): Promise<string> {
   const GOOGLE_SERVICE_ACCOUNT_EMAIL = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_EMAIL');
   const rawPrivateKey = Deno.env.get('GOOGLE_PRIVATE_KEY');
-  // Ensure newlines are correctly interpreted. If Supabase UI already handles them,
-  // this .replace() will do nothing, which is fine. If it escapes them, this fixes it.
-  const GOOGLE_PRIVATE_KEY = rawPrivateKey?.replace(/\\n/g, '\n');
   
-  console.log("DEBUG: GOOGLE_SERVICE_ACCOUNT_EMAIL:", GOOGLE_SERVICE_ACCOUNT_EMAIL);
-  console.log("DEBUG: Raw GOOGLE_PRIVATE_KEY (first 50 chars):", rawPrivateKey?.substring(0, 50) + '...');
-  console.log("DEBUG: Processed GOOGLE_PRIVATE_KEY (first 50 chars):", GOOGLE_PRIVATE_KEY?.substring(0, 50) + '...');
-  console.log("DEBUG: Processed GOOGLE_PRIVATE_KEY length:", GOOGLE_PRIVATE_KEY?.length);
-  console.log("DEBUG: Processed GOOGLE_PRIVATE_KEY contains BEGIN:", GOOGLE_PRIVATE_KEY?.includes('-----BEGIN PRIVATE KEY-----'));
-  console.log("DEBUG: Processed GOOGLE_PRIVATE_KEY contains END:", GOOGLE_PRIVATE_KEY?.includes('-----END PRIVATE KEY-----'));
-  console.log("DEBUG: Processed GOOGLE_PRIVATE_KEY contains newlines:", GOOGLE_PRIVATE_KEY?.includes('\n'));
-
-  if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY) {
+  if (!GOOGLE_SERVICE_ACCOUNT_EMAIL || !rawPrivateKey) {
     throw new Error("Missing Google Sheets API credentials in environment variables. Please ensure GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY are set as Supabase secrets.");
   }
+
+  // Clean the private key string: remove headers/footers and all whitespace
+  const GOOGLE_PRIVATE_KEY_CLEAN = rawPrivateKey
+    .replace('-----BEGIN PRIVATE KEY-----', '')
+    .replace('-----END PRIVATE KEY-----', '')
+    .replace(/\s/g, ''); // Remove all whitespace, including newlines
+
+  console.log("DEBUG: GOOGLE_SERVICE_ACCOUNT_EMAIL:", GOOGLE_SERVICE_ACCOUNT_EMAIL);
+  console.log("DEBUG: Cleaned GOOGLE_PRIVATE_KEY (first 50 chars):", GOOGLE_PRIVATE_KEY_CLEAN.substring(0, 50) + '...');
+  console.log("DEBUG: Cleaned GOOGLE_PRIVATE_KEY length:", GOOGLE_PRIVATE_KEY_CLEAN.length);
 
   const header = {
     alg: "RS256",
@@ -41,10 +40,24 @@ async function getGoogleAccessToken(): Promise<string> {
   };
 
   try {
-    // Pass the GOOGLE_PRIVATE_KEY string directly to djwt.create
-    // djwt is capable of parsing PEM strings directly.
-    const jwt = await create(header, payload, GOOGLE_PRIVATE_KEY); 
-    console.log("DEBUG: JWT created successfully using direct PEM string.");
+    // Decode the Base64 string to a Uint8Array (binary DER format)
+    const binaryDer = Uint8Array.from(atob(GOOGLE_PRIVATE_KEY_CLEAN), c => c.charCodeAt(0));
+
+    // Import the private key as a CryptoKey
+    const privateKey = await crypto.subtle.importKey(
+      "pkcs8", // Format for PEM private keys (after stripping headers/footers)
+      binaryDer, // Key data as Uint8Array
+      {
+        name: "RSASSA-PKCS1-v1_5", // Algorithm name for RS256
+        hash: "SHA-256",
+      },
+      false, // Not extractable
+      ["sign"] // Usage for signing
+    );
+    console.log("DEBUG: Private key imported successfully as CryptoKey.");
+
+    const jwt = await create(header, payload, privateKey); // Pass the CryptoKey
+    console.log("DEBUG: JWT created successfully.");
 
     const response = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
@@ -149,8 +162,7 @@ serve(async (req) => {
         break;
 
       case 'write_sheet':
-        // For security, writing is only allowed if the user is an admin.
-        // This part remains unchanged from previous admin-only logic, but now it's explicit.
+        // For security, writing is only allowed if the user is an "admin".
         const { data: adminProfile, error: adminProfileError } = await supabaseClient
           .from('profiles')
           .select('role')
